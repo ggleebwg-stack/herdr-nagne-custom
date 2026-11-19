@@ -13,7 +13,17 @@
 npx github:ggleebwg-stack/herdr-nagne-custom
 ```
 
-설치 후 herdr에서 `Ctrl+Shift+L`을 눌러 **supervisor** 레이아웃으로 바꾸면 끝입니다. 업데이트도 같은 명령입니다. 자세한 설명은 아래 [설치](#설치)에 있습니다.
+설치 후 herdr에서 `Ctrl+Shift+L`(macOS는 `Cmd+Shift+L`)을 눌러 **supervisor** 레이아웃으로 바꾸면 끝입니다. 자세한 설명은 아래 [설치](#설치)에 있습니다.
+
+## 업데이트
+
+같은 명령을 다시 실행합니다.
+
+```
+npx github:ggleebwg-stack/herdr-nagne-custom
+```
+
+최신 버전을 받아 와서 바뀐 파일만 교체하고, `Updated from 0.3.0 to 0.3.1: skills, explore.md`나 `Already up to date`처럼 결과를 알려 줍니다. 프로젝트 폴더, `providers.json`, 단축키, 훅은 유지되고, 교체된 파일은 `~/.herdr-config-backup/<시각>/`으로 옮겨 둡니다. 무엇이 바뀔지 먼저 보려면 `--dry-run`을 붙이세요. 자세한 내용은 [업데이트와 삭제](#업데이트와-삭제)에 있습니다.
 
 ![supervisor 레이아웃: 왼쪽은 워커 두 개를 띄운 셸, 오른쪽은 실시간 워커 칸, 아래는 사용량 막대](docs/supervisor.png)
 

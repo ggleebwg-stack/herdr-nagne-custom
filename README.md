@@ -13,7 +13,17 @@ You need [herdr](https://herdr.dev) and [Node.js](https://nodejs.org). In any te
 npx github:ggleebwg-stack/herdr-nagne-custom
 ```
 
-Then press `Ctrl+Shift+L` in herdr until the **supervisor** layout shows. Run the same line again to update. Details and options: [Install](#install).
+Then press `Ctrl+Shift+L` (`Cmd+Shift+L` on macOS) in herdr until the **supervisor** layout shows. Details and options: [Install](#install).
+
+## Update
+
+Run the same line again:
+
+```
+npx github:ggleebwg-stack/herdr-nagne-custom
+```
+
+It fetches the newest version, replaces only the files that changed, and prints what it did, for example `Updated from 0.3.0 to 0.3.1: skills, explore.md` or `Already up to date`. Your projects folder, `providers.json`, key bindings and hooks are kept, and each replaced file is moved to `~/.herdr-config-backup/<time>/`. To see what would change first, add `--dry-run`. More: [Update and uninstall](#update-and-uninstall).
 
 ![The supervisor layout: a shell that launched two read-only workers on the left, the live worker column on the right, usage bars at the bottom](docs/supervisor.png)
 
