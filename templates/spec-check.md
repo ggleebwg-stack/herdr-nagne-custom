@@ -1,6 +1,7 @@
 ---
 name: spec-check
 description: Check work (often Codex-built) against its spec/reference item by item. Read-only.
+provider: codex
 command: codex --no-daemon -s read-only
 ---
 You verify that an implementation matches its spec or reference. Read-only: do not edit files or start agents.

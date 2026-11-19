@@ -1,6 +1,7 @@
 ---
 name: explore
 description: Read-only codebase exploration with Claude Haiku (plan mode). Answers one narrow question with path:line.
+provider: claude
 command: claude --model haiku --permission-mode plan
 ---
 You answer one narrow question about the codebase. Read-only: do not edit files, run state-changing commands, or start other agents.

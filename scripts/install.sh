@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install the kit on this machine: mods, the supervisor layout, worker templates and hw.
 # Anything it replaces is moved first to ~/.herdr-config-backup/<time>/ (nothing is deleted).
-# keys.json and settings.json are yours: the kit never overwrites them (see README for the lines to add).
+# keys.json, settings.json and providers.json are yours: the kit never overwrites them.
 # usage: scripts/install.sh [--dry-run]
 set -euo pipefail
 source "$(dirname "$0")/paths.sh"
@@ -19,10 +19,14 @@ for m in $MODS; do put "$REPO/mods/$m" "$APP/mods/$m"; done
 for l in $LAYOUTS; do put "$REPO/layouts/$l" "$APP/layouts/$l"; done
 for t in "$REPO"/templates/*.md; do put "$t" "$CORE_TPL/$(basename "$t")"; done
 put "$REPO/hw" "$BIN/hw"; run chmod +x "$BIN/hw"
+if [ -f "$NAGNE/providers.json" ]; then echo "kept your $NAGNE/providers.json"
+else run mkdir -p "$NAGNE"; run cp "$REPO/providers.example.json" "$NAGNE/providers.json"; fi
 cat <<EOF
 Installed. Replaced files are in $BK (if any).
 Next:
   1. Add the bindings in keys.snippet.json to $APP/keys.json
   2. Set your projects folder: "root" in $APP/layouts/supervisor.json (default ~/Projects)
   3. Switch layout: Ctrl+Shift+L, or  herdr-app do layout.switch '{"name":"supervisor"}'
+  4. Choose providers (Claude, Codex, Grok, OpenRouter) in $NAGNE/providers.json
+  5. Other computers over Tailscale: scripts/add-machine.sh <name> <tailscale-host> <user>
 EOF

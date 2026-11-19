@@ -3,16 +3,30 @@
 # Native `hc run <template>` needs sh, which Windows hc can't spawn; this reads the template itself.
 # usage: hw <template> <name> "<task>" [cwd]      list: hw
 # Collect results: hc wait --children all ; hc read --lines 60 <name>
+# A template's `provider:` is checked against ~/.config/herdr-nagne/providers.json (off = refused),
+# and ${VAR} in its `command:` is filled from the environment (unset = refused).
 set -euo pipefail
 HC=$(command -v hc || command -v hc.exe || echo "$(cygpath -u "${LOCALAPPDATA:-}" 2>/dev/null)/Programs/herdr-core/hc.exe")
 # Windows keeps herdr-core's config under %APPDATA%; macOS/Linux under ~/.config.
 if [ -n "${APPDATA:-}" ]; then DIR="$APPDATA/herdr-core/templates"; else DIR="$HOME/.config/herdr-core/templates"; fi
+CONF="${HERDR_NAGNE_PROVIDERS:-$HOME/.config/herdr-nagne/providers.json}"
 if [ $# -eq 0 ]; then "$HC" templates; exit 0; fi
 [ $# -ge 3 ] || { echo "usage: hw <template> <name> \"<task>\" [cwd]" >&2; exit 2; }
 f="$DIR/$1.md"; [ -f "$f" ] || { echo "no template: $f" >&2; exit 3; }
-cmd=$(awk '/^---$/{n++; next} n==1 && /^command:/{sub(/^command:[ ]*/,""); print}' "$f")
+field() { awk -v k="$1" '/^---$/{n++; next} n==1 && $0 ~ "^"k":" {sub("^"k":[ ]*",""); print}' "$f"; }
+cmd=$(field command)
+prov=$(field provider)
+# providers.json keeps one provider per line: "grok": { "enabled": false, ... }
+if [ -n "$prov" ] && [ -f "$CONF" ] && grep -E "\"$prov\"[[:space:]]*:" "$CONF" | grep -q -E '"enabled"[[:space:]]*:[[:space:]]*false'; then
+  echo "provider '$prov' is switched off in $CONF" >&2; exit 4
+fi
+while [[ $cmd =~ \$\{([A-Za-z_][A-Za-z0-9_]*)\} ]]; do
+  v=${BASH_REMATCH[1]}
+  [ -n "${!v:-}" ] || { echo "template $1 needs \$$v; set it first (e.g. export $v=...)" >&2; exit 5; }
+  cmd=${cmd//"\${$v}"/${!v}}
+done
 body=$(awk '/^---$/{n++; next} n>=2' "$f")
-# .cmd shims (npm codex) reject line breaks in arguments: send one line
+# .cmd shims (npm codex, opencode) reject line breaks in arguments: send one line
 prompt=$(printf '%s\n\nTask: %s' "$body" "$3" | tr '\r\n' '  ' | tr -s ' ')
 read -r -a argv <<<"$cmd"
 exec "$HC" run --bg --json --name "$2" --cwd "${4:-$PWD}" -- "${argv[@]}" "$prompt"

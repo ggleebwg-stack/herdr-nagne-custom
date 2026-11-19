@@ -1,7 +1,7 @@
 # herdr-nagne-custom
 
 **에이전트 하나를 돌리면서, 그 하위 에이전트들이 일하는 모습을 옆에서 본다.**
-[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex 워커 감독용 화면으로 바꾸는 레이아웃 하나, mod 다섯 개, 작은 실행기입니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
+[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex·Grok·OpenRouter 워커 감독용 화면으로 바꾸는 레이아웃 하나, mod 다섯 개, 작은 실행기입니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
 
 [English README](README.md) · [프로젝트 지도](MAP.ko.md): 파일 구성, 설치 위치, 연결 구조
 
@@ -15,11 +15,12 @@
 |---|---|
 | **`supervisor` 레이아웃** | herdr 기본 레이아웃에 오른쪽 **워커 칸**을 더했습니다. 하위 에이전트가 생기면 저절로 열리고, 모두 끝나면 닫힙니다. `Ctrl+Shift+A`로 켜고 끕니다. |
 | **`workers` mod** | 워커 칸 위쪽에 실행 중인 워커마다 칩이 하나씩 붙습니다. 칩을 누르면 그 워커 화면이 아래에 고정됩니다. 칩마다 미리보기와 종료 버튼이 있습니다. |
-| **`status-plus` mod** | 기본 상태바에 **Claude·Codex 사용량 막대**(5시간, 주간)를 더했습니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. 새로고침 버튼이 있고, 다시 불러와도 받아 둔 값을 쓰며, 서버가 429(요청 과다)로 답하면 알려준 시간만큼 기다립니다. |
+| **`status-plus` mod** | 기본 상태바에 **프로바이더별 사용량 칸**을 더했습니다. Claude·Codex는 5시간·주간 막대, OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 어떤 프로바이더를 보일지는 `providers.json`에서 정합니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. 새로고침 버튼이 있고, 다시 불러와도 받아 둔 값을 쓰며, 서버가 429(요청 과다)로 답하면 알려준 시간만큼 기다립니다. |
 | **`projects` mod** | 왼쪽에 프로젝트 폴더 목록을 최근 수정 순으로 보여줍니다. 클릭하면 그 폴더에서 작업 중인 Space로 가고, 없으면 새로 엽니다. ×로 목록에서 숨길 수 있고, 디스크의 폴더는 건드리지 않습니다. |
 | **`skills` mod** | Claude Code 스킬(개인·프로젝트·플러그인)을 보여주고, `/스킬 인자`를 **대기 중인 에이전트에게만** 보냅니다. |
 | **`agent-folders` mod** | Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. [kiote의 mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders)에서 Windows 작업표시줄 점 표시만 뺐습니다. |
-| **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku, plan 모드), `spec-check`(Codex, 읽기 전용), `astra-review`(Codex 설계 검토, 읽기 전용) 세 가지입니다. |
+| **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다. `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
+| **`scripts/add-machine.sh`** | **Tailscale**로 연결되는 집·회사 컴퓨터를 herdr-core에 추가합니다. 이 창에서 그 컴퓨터의 에이전트를 띄우고 볼 수 있습니다. |
 
 ## 설치
 
@@ -40,6 +41,9 @@
 | git | 저장소 받기 | Windows는 위와 같음. macOS: `xcode-select --install` |
 | Claude Code | `explore` 워커, Claude 사용량, Skills 패널 | [설치 안내](https://docs.claude.com/en/docs/claude-code/setup). 설치 후 `claude`를 한 번 실행해 로그인 |
 | Codex CLI | `spec-check`·`astra-review` 워커, Codex 사용량 | `npm install -g @openai/codex` 후 `codex login` |
+| Grok CLI | `grok-explore` 워커, Grok 칸 | `curl -fsSL https://x.ai/cli/install.sh \| bash` (Windows는 Git Bash) 후 `grok login` |
+| opencode | `openrouter-explore` 워커 | `npm install -g @opencode/cli` |
+| Tailscale | 다른 컴퓨터 연결(선택) | 두 컴퓨터 모두 [tailscale.com/download](https://tailscale.com/download), 같은 계정으로 로그인 |
 
 쓸 에이전트만 설치하면 됩니다. 로그인하지 않은 서비스는 상태바에 `—`로 표시됩니다.
 
@@ -62,15 +66,17 @@ scripts/install.sh             # 교체되는 파일은 ~/.herdr-config-backup/<
 | `layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
 | `templates/*.md` | Windows `%APPDATA%\herdr-core\templates\`, 그 밖 `~/.config/herdr-core/templates/` |
 | `hw` | `~/.local/bin/hw` (이 폴더가 PATH에 있어야 함) |
+| `providers.example.json` | `~/.config/herdr-nagne/providers.json` (없을 때만) |
 
-사용자의 `keys.json`과 `settings.json`은 건드리지 않습니다.
+사용자의 `keys.json`, `settings.json`, 이미 있는 `providers.json`은 건드리지 않습니다.
 
 ### 4. herdr에서 마무리
 
 1. **단축키**: [`keys.snippet.json`](keys.snippet.json)의 항목을 `~/.config/herdr-app/keys.json`에 옮겨 적습니다. `global`은 기존 `global` 안에 합치고, `layout:supervisor` 구역은 새로 추가합니다.
 2. **프로젝트 폴더**: `~/.config/herdr-app/layouts/supervisor.json`에서 `"mod": "projects"`를 찾아 `"root"`를 바꿉니다. 기본값은 `"~/Projects"`입니다. Windows 경로는 `"D:\\Code"`처럼 백슬래시를 두 번 씁니다.
 3. **레이아웃**: `Ctrl+Shift+L`을 눌러 **supervisor**로 바꿉니다. 또는 `herdr-app do layout.switch '{"name":"supervisor"}'`를 실행합니다.
-4. (선택) `~/.config/herdr-app/settings.json`에서 터미널 글꼴(`"font": "D2Coding"`)이나 worktree 위치(`"worktrees": { "directory": "D:\\Code\\.worktrees" }`)를 정할 수 있습니다. Projects 목록은 점(.)으로 시작하는 폴더를 빼고 보여줍니다.
+4. **프로바이더**: `~/.config/herdr-nagne/providers.json`에서 켜고 끕니다([프로바이더](#프로바이더) 참고).
+5. (선택) `~/.config/herdr-app/settings.json`에서 터미널 글꼴(`"font": "D2Coding"`)이나 worktree 위치(`"worktrees": { "directory": "D:\\Code\\.worktrees" }`)를 정할 수 있습니다. Projects 목록은 점(.)으로 시작하는 폴더를 빼고 보여줍니다.
 
 ### 5. 동작 확인
 
@@ -103,6 +109,59 @@ hc wait --children all        # 모든 워커가 끝날 때까지 대기
 hc read --lines 60 cart-spec  # 워커의 마지막 요약 읽기
 ```
 
+### 결과는 어디로 가나
+
+워커는 `hw`를 실행한 터미널을 **부모**로 둔 평범한 herdr-core 터미널입니다. 결과를 따로 복사해 두지 않고, 워커 화면과 세션 자체가 결과입니다.
+
+| 단계 | 방법 |
+|---|---|
+| 진행 보기 | 오른쪽 워커 칸에서 고른 워커 화면을 실시간으로 봅니다. `hc ls`는 모든 워커와 상태(`working`, `blocked`, `done`, `idle`)를 보여줍니다. |
+| 끝날 때까지 기다리기 | `hc wait --children all`(또는 `hc wait <이름>`)은 워커가 작업을 멈추면 돌아옵니다. |
+| 답 가져오기 | `hc read --lines 60 <이름>`은 마지막 화면을 출력합니다. 템플릿이 마지막에 요약을 남기라고 지시하므로, 마지막 화면이 곧 답입니다. |
+| 이어서 묻기 | `hc send <이름> "…"`은 같은 세션에 입력하고, 워커는 앞의 맥락을 그대로 기억합니다. |
+| 파일로 남기기 | `hc read --lines 200 <이름> > notes/<이름>.md`처럼 저장합니다. |
+| 정리 | `hc kill <이름>`으로 끝내면 칸과 칩도 사라집니다. |
+
+대화 기록은 각 CLI가 평소처럼 따로 남깁니다(Claude Code는 `~/.claude/projects`, Codex는 `~/.codex/sessions`, Grok은 `~/.grok/sessions`). 그래서 워커 세션도 나중에 다른 세션처럼 이어서 쓸 수 있습니다.
+
+## 프로바이더
+
+`~/.config/herdr-nagne/providers.json`은 두 가지를 정합니다. 상태바에 어떤 프로바이더를 보일지, 그리고 `hw`가 어떤 프로바이더의 워커를 띄울지입니다. 프로바이더 하나를 한 줄에 씁니다.
+
+```json
+{
+  "claude":     { "enabled": true },
+  "codex":      { "enabled": true },
+  "grok":       { "enabled": true },
+  "openrouter": { "enabled": false, "keyEnv": "OPENROUTER_API_KEY" }
+}
+```
+
+| 프로바이더 | 상태바 | 쓰는 로그인 | 워커 템플릿 |
+|---|---|---|---|
+| Claude | 5시간·주간 막대 | Claude Code 로그인 | `explore` |
+| Codex | 5시간·주간 막대 | Codex CLI 로그인 | `spec-check`, `astra-review` |
+| Grok | `grok usage`가 값을 주면 표시, 아니면 `/usage` 안내(그때는 grok 안에서만 구독 사용량을 볼 수 있음) | Grok CLI 로그인(`grok login`) | `grok-explore` (plan 모드) |
+| OpenRouter | 키 잔액(한도가 있으면 막대와 `$ left`, 없으면 `$ used`) | `keyEnv`에 적은 환경변수나 `keyFile`에 적은 파일의 키 | `openrouter-explore` (opencode, plan 에이전트). `OPENROUTER_MODEL`을 지정해야 합니다(예: `qwen/qwen3-coder`) |
+
+키는 필요할 때 읽기만 하고 어디에도 저장하지 않습니다. Windows에서는 herdr를 켠 뒤에 설정한 환경변수도 찾습니다. mod가 사용자 환경변수 저장값까지 읽기 때문입니다.
+
+## Tailscale로 다른 컴퓨터 연결
+
+herdr-core는 ssh로 다른 컴퓨터에서 에이전트를 실행하고 이 창에 보여줄 수 있습니다. 두 컴퓨터에 [Tailscale](https://tailscale.com)을 켜 두면 포트를 열지 않고도 집과 회사가 서로 연결됩니다.
+
+1. **연결할 컴퓨터에서**:
+   - Tailscale을 설치하고 같은 계정으로 로그인합니다.
+   - ssh를 켭니다. macOS는 시스템 설정 › 일반 › 공유 › **원격 로그인**을 켜고, 내 사용자만 허용합니다. Linux는 ssh 서버를 실행합니다.
+2. **이 컴퓨터에서**: `scripts/add-machine.sh home-mac <tailscale 이름> <사용자>`를 실행합니다. tailscale 이름은 `tailscale status`에 나오는 이름이나 `100.x` 주소입니다. 스크립트가 하는 일:
+   - ssh 키가 있는지 확인합니다.
+   - `~/.ssh/config`에 접속 항목을 추가합니다. 기존 파일은 `~/.ssh/config.bak-<시각>`으로 복사해 둡니다.
+   - 로그인을 시험합니다. 실패하면, 이 컴퓨터의 공개키를 상대 컴퓨터의 `~/.ssh/authorized_keys`에 넣는 명령을 그대로 출력합니다.
+   - `hc machine add`를 실행합니다. 상대 컴퓨터에 herdr-core가 없으면 설치할지 묻습니다.
+3. **사용**: herdr에서 그 컴퓨터로 새 Space를 열거나, 아무 터미널에서 `hc run --on home-mac -- claude`를 실행합니다. 그 컴퓨터의 터미널은 `home-mac/t7`처럼 부르고, `hc read home-mac/t7`도 로컬처럼 동작합니다.
+
+`hc machine ls`로 추가한 컴퓨터를 보고, `hc machine rm <이름>`으로 목록에서 뺍니다. 빼더라도 그 컴퓨터의 터미널은 계속 돕니다.
+
 ## Windows에서 알아둘 점
 
 - herdr-core가 `sh`를 실행하려고 해서 `hc run <템플릿>`이 실패합니다. 그래서 **`hw`가 템플릿을 직접 읽어** 실행합니다.
@@ -116,16 +175,8 @@ History 버튼과 `Ctrl+Shift+H`는 [plutotw/herdr-main-usage](https://github.co
 
 ## 통신과 개인정보
 
-- `status-plus`는 Anthropic과 OpenAI의 사용량 조회 주소 두 곳에만 접속합니다. 로그인 정보는 두 CLI가 이미 저장해 둔 것을 읽어서 해당 회사 서버에만 보내고, 따로 저장하거나 기록하지 않습니다.
+- `status-plus`는 켜 둔 프로바이더의 사용량 조회 주소에만 접속합니다(Anthropic, OpenAI, OpenRouter). 로그인 정보와 키는 각 회사 서버에만 보내고, 따로 저장하거나 기록하지 않습니다. Grok은 로컬 `grok usage --json`만 실행합니다.
 - 나머지 mod는 네트워크를 쓰지 않습니다.
-
-## 다음 계획 (v0.2)
-
-- Claude·Codex에 이어 Grok과 OpenRouter를 지원합니다.
-  - 상태바: 조회할 수 있는 곳은 사용량이나 잔액을 보여줍니다.
-  - 워커 템플릿을 추가합니다.
-  - `providers.json` 하나로 켜고 끕니다. 키는 환경변수에서 읽고 저장하지 않습니다.
-- Tailscale로 연결한 원격 머신(`hc machine add`)을 지원합니다.
 
 ## 라이선스
 

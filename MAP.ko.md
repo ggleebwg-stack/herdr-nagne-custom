@@ -8,7 +8,7 @@
 herdr-nagne-custom/
 ├── mods/                  herdr 패널(JavaScript)              → ~/.config/herdr-app/mods/
 │   ├── workers/           워커 칩 + 고른 워커를 오른쪽 칸에 고정
-│   ├── status-plus/       상태바: 사용량 막대, 새로고침, History·Skills 버튼
+│   ├── status-plus/       상태바: 프로바이더별 사용량 칸, 새로고침, History·Skills 버튼
 │   ├── projects/          왼쪽 프로젝트 폴더 목록
 │   ├── skills/            Claude Code 스킬 목록, 대기 중인 에이전트에 /스킬 전송
 │   └── agent-folders/     Agents 목록을 색깔 폴더로 (kiote/pi-setup 기반, 고지 파일 포함)
@@ -16,13 +16,17 @@ herdr-nagne-custom/
 │   └── supervisor.json    mod들을 배치한 창 레이아웃            → ~/.config/herdr-app/layouts/
 ├── templates/             워커 템플릿                           → Windows %APPDATA%\herdr-core\templates\
 │   ├── explore.md         Claude Haiku, plan 모드(읽기 전용)       macOS/Linux ~/.config/herdr-core/templates/
+│   ├── grok-explore.md    Grok, plan 모드(읽기 전용)
+│   ├── openrouter-explore.md  opencode로 OpenRouter 모델 (모델은 $OPENROUTER_MODEL)
 │   ├── spec-check.md      Codex, 읽기 전용, 명세 대조
 │   └── astra-review.md    Codex, 읽기 전용, 설계 검토
 ├── hw                     워커 실행기(bash)                     → ~/.local/bin/hw
 ├── keys.snippet.json      keys.json에 직접 합칠 단축키
+├── providers.example.json 켤 프로바이더와 키 위치          → ~/.config/herdr-nagne/providers.json (없을 때만)
 ├── scripts/
 │   ├── install.sh         저장소 → 이 PC (교체 파일은 ~/.herdr-config-backup/<시각>/ 으로 옮김)
 │   ├── export.sh          이 PC → 저장소 (프로젝트 경로는 ~/Projects로 바꿔 저장)
+│   ├── add-machine.sh     Tailscale로 다른 컴퓨터 연결 (~/.ssh/config + hc machine add)
 │   └── paths.sh           두 스크립트가 함께 쓰는 경로와 mod 목록
 ├── docs/                  README 스크린샷 (데모 프로젝트로 촬영)
 ├── README.md, README.ko.md
@@ -55,6 +59,8 @@ root
 
 ```
 herdr 안의 터미널 ── hw <템플릿> <이름> "<작업>" ──► templates/<템플릿>.md
+                                                    │ provider가 providers.json에서 꺼져 있으면 거부
+                                                    │ 명령 속 ${변수}는 환경변수로 채움
                                                     │ 명령 + 프롬프트(한 줄로)
                                                     ▼
                           hc run --bg --name <이름> -- <명령> "<프롬프트>"
@@ -80,5 +86,15 @@ herdr의 `~/.config/herdr-app/shared.json`에 저장됩니다. 설치·내보내
 
 ## 외부 통신
 
-- **`status-plus`:** `api.anthropic.com`와 `chatgpt.com`의 사용량 조회 주소만 호출합니다. 로그인 정보는 각 CLI가 이미 저장해 둔 것을 씁니다.
+- **`status-plus`:** 켜 둔 프로바이더의 사용량 조회 주소만 호출합니다(`api.anthropic.com`, `chatgpt.com`, `openrouter.ai`). 로그인 정보는 각 CLI가 저장해 둔 것을, OpenRouter는 `providers.json`에 적은 환경변수나 파일의 키를 씁니다. Grok은 로컬 `grok usage --json`만 실행합니다.
 - **나머지 mod:** 네트워크를 쓰지 않습니다.
+
+## 다른 컴퓨터 연결 (Tailscale)
+
+```
+ 이 컴퓨터                                              집·회사 컴퓨터 (Tailscale, 같은 계정)
+ scripts/add-machine.sh <이름> <호스트> <사용자>
+   ~/.ssh/config  Host <이름> → HostName <호스트>  ──ssh──►  원격 로그인 켬, 내 키가 ~/.ssh/authorized_keys에 있음
+   hc machine add <이름>                          ──ssh──►  herdr-core (없으면 설치 제안)
+ herdr 창: <이름> 컴퓨터의 Space와 터미널  ◄────────────  에이전트는 그쪽에서 실행, <이름>/t7로 부름
+```

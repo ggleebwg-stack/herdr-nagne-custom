@@ -1,0 +1,6 @@
+{
+  "claude":     { "enabled": true },
+  "codex":      { "enabled": true },
+  "grok":       { "enabled": true },
+  "openrouter": { "enabled": false, "keyEnv": "OPENROUTER_API_KEY" }
+}

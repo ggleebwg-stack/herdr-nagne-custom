@@ -11,7 +11,7 @@ herdr-nagne-custom/
 │   │   ├── main.js
 │   │   ├── mod.json
 │   │   └── terminal.svg, x.svg
-│   ├── status-plus/           status bar: usage bars, refresh, History/Skills buttons
+│   ├── status-plus/           status bar: a usage chip per provider, refresh, History/Skills buttons
 │   │   ├── main.js
 │   │   ├── mod.json           cloned_from: workspace-status (herdr-app 0.1.16)
 │   │   └── refresh.svg
@@ -29,14 +29,18 @@ herdr-nagne-custom/
 ├── layouts/
 │   └── supervisor.json        the window layout that wires the mods together  -> ~/.config/herdr-app/layouts/
 ├── templates/                 worker templates  -> %APPDATA%\herdr-core\templates\ (Windows)
-│   ├── explore.md             claude --model haiku --permission-mode plan      ~/.config/herdr-core/templates/ (macOS/Linux)
-│   ├── spec-check.md          codex --no-daemon -s read-only
-│   └── astra-review.md        codex --no-daemon -m <model> -s read-only
+│   ├── explore.md             provider claude: claude --model haiku --permission-mode plan   ~/.config/herdr-core/templates/ (macOS/Linux)
+│   ├── grok-explore.md        provider grok: grok --permission-mode plan --no-subagents
+│   ├── openrouter-explore.md  provider openrouter: opencode run --agent plan -m openrouter/${OPENROUTER_MODEL}
+│   ├── spec-check.md          provider codex: codex --no-daemon -s read-only
+│   └── astra-review.md        provider codex: codex --no-daemon -m <model> -s read-only
 ├── hw                         worker launcher (bash)  -> ~/.local/bin/hw
+├── providers.example.json     which providers are on, where keys come from  -> ~/.config/herdr-nagne/providers.json (once)
 ├── keys.snippet.json          key bindings to merge into ~/.config/herdr-app/keys.json by hand
 ├── scripts/
 │   ├── install.sh             repo -> this machine (moves replaced files to ~/.herdr-config-backup/<time>/)
 │   ├── export.sh              this machine -> repo (writes the projects root back as ~/Projects)
+│   ├── add-machine.sh         another computer over Tailscale -> ~/.ssh/config + hc machine add
 │   └── paths.sh               shared paths and the list of mods, sourced by both scripts
 ├── docs/                      README screenshots (taken from a demo project)
 ├── README.md, README.ko.md    overview and install guide
@@ -72,6 +76,8 @@ root (row)
 
 ```
  terminal in herdr ── hw <template> <name> "<task>" ──► templates/<template>.md
+                                                          │ provider: off in providers.json? -> refused
+                                                          │ ${VAR} in command: from the environment
                                                           │ command + prompt (one line)
                                                           ▼
                                     hc run --bg --name <name> -- <command> "<prompt>"
@@ -87,7 +93,7 @@ root (row)
 | Mod | Reads | Writes / runs | Shared state keys |
 |---|---|---|---|
 | workers | `terminals()`, `layout()` | `layout.set`, `layout.show` / `layout.hide` (the watch column), `terminal.peek`, `terminal.kill` | none |
-| status-plus | `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json` | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
+| status-plus | `~/.config/herdr-nagne/providers.json`, `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json`, the OpenRouter key (`keyEnv` / `keyFile`) | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage`, `openrouter.ai/api/v1/key`; runs `grok usage --json` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
 | projects | folder names under `props.root` (PowerShell / `ls`), `spaces()`, `panes()` | `space.select`, `space.new` | `projects.hidden` |
 | skills | `~/.claude/skills`, `<repo>/.claude/skills`, `~/.claude/plugins/installed_plugins.json` | `hc send --if idle <agent> "/skill args"` | none |
 | agent-folders | `agents()`, `terminals()`, `spaces()`, `panes()`, `layout()` | `hc label <terminal> agentfolders.folder=…`, `pane.focus`, `terminal.peek`, `terminal.pin`, `layout.resize` | `agentFolders`, `sidebar.width`, `sidebar.collapsed` |
@@ -103,5 +109,16 @@ Shared state lives in herdr's `~/.config/herdr-app/shared.json`. The scripts nev
  layouts/*.json    → ~/.config/herdr-app/layouts/       projects root → "~/Projects"
  templates/*.md    → herdr-core templates folder        keys.json / settings.json never exported
  hw                → ~/.local/bin/hw
+ providers.example.json → ~/.config/herdr-nagne/providers.json (only if missing)   providers.json never exported
  keys.snippet.json → (merge by hand)
+```
+
+## Other computers (Tailscale)
+
+```
+ this computer                                         home / office computer (Tailscale, same account)
+ scripts/add-machine.sh <name> <host> <user>
+   ~/.ssh/config  Host <name> → HostName <host>   ──ssh──►  Remote Login on, your key in ~/.ssh/authorized_keys
+   hc machine add <name>                          ──ssh──►  herdr-core (offered for install if missing)
+ herdr window: spaces and terminals on <name>  ◄──────────  agents run there; addressed as <name>/t7
 ```
