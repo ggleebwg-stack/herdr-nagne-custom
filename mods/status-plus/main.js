@@ -13,6 +13,9 @@ import * as fs from "fs/promises";
 
 // The usage endpoints are rate limited; five minutes is fresh enough for a status bar.
 const REFRESH_MS = 5 * 60 * 1000;
+// Bump when fetchUsage starts returning different bars, so an update asks again
+// instead of showing a cached answer without them until the next refresh.
+const USAGE_SHAPE = 2;
 const WIN = /^[A-Za-z]:/.test(home());
 const DIR = `${home()}/.config/herdr-nagne`;
 const CONFIG = `${DIR}/providers.json`;
@@ -69,6 +72,11 @@ const PROVIDERS = {
     windows: (d) => [
       ["5h", d.five_hour?.utilization, Date.parse(d.five_hour?.resets_at)],
       ["wk", d.seven_day?.utilization, Date.parse(d.seven_day?.resets_at)],
+      // A model with its own weekly limit (e.g. Fable) comes as a "weekly_scoped" entry in
+      // `limits`; each one gets a bar after wk, labeled with the model's name.
+      ...(Array.isArray(d.limits) ? d.limits : [])
+        .filter((l) => l?.kind === "weekly_scoped" && l.scope?.model?.display_name)
+        .map((l) => [l.scope.model.display_name, l.percent, Date.parse(l.resets_at)]),
     ],
   },
   codex: {
@@ -202,7 +210,7 @@ export default class StatusPlus extends View {
   load(cx, key, cfg, force) {
     const cacheKey = `status-plus.usage.${key}`;
     const cached = shared(cacheKey);
-    if (!force && cached?.at && Date.now() - cached.at < REFRESH_MS - 30000) {
+    if (!force && cached?.at && cached.shape === USAGE_SHAPE && Date.now() - cached.at < REFRESH_MS - 30000) {
       this.usage[key] = cached;
       cx.notify();
       return;
@@ -220,7 +228,7 @@ export default class StatusPlus extends View {
       let r;
       try { r = await fetchUsage(key, cfg); } catch (e) { r = { error: String(e?.message ?? e) }; }
       this.pending -= 1;
-      if (!r.error) setShared(cacheKey, { ...r, at: Date.now() });
+      if (!r.error) setShared(cacheKey, { ...r, at: Date.now(), shape: USAGE_SHAPE });
       if (r.error === "HTTP 429") setShared(`status-plus.blocked.${key}`, Date.now() + Math.max(r.retryAfter, 60) * 1000);
       this.usage[key] = r.error && cached?.windows ? { ...cached, stale: r.error } : r;
       cx.notify();

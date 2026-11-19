@@ -35,7 +35,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 |---|---|
 | **`supervisor` 레이아웃** | herdr 기본 레이아웃에 오른쪽 **워커 칸**을 더했습니다. 하위 에이전트가 생기면 저절로 열리고, 모두 끝나면 닫힙니다. `Ctrl+Shift+A`로 켜고 끕니다. |
 | **`workers` mod** | 워커 칸 위쪽에 실행 중인 워커마다 칩이 하나씩 붙습니다. 칩을 누르면 그 워커 화면이 아래에 고정됩니다. 칩마다 미리보기와 종료 버튼이 있습니다. |
-| **`status-plus` mod** | 기본 상태바에 **프로바이더별 사용량 칸**을 더했습니다. Claude·Codex는 5시간·주간 막대, OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 어떤 프로바이더를 보일지는 `providers.json`에서 정합니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. 새로고침 버튼이 있고, 다시 불러와도 받아 둔 값을 쓰며, 서버가 429(요청 과다)로 답하면 알려준 시간만큼 기다립니다. |
+| **`status-plus` mod** | 기본 상태바에 **프로바이더별 사용량 칸**을 더했습니다. Claude·Codex는 5시간·주간 막대(Claude는 Fable처럼 주간 한도가 따로 있는 모델마다 막대 하나를 더), OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 어떤 프로바이더를 보일지는 `providers.json`에서 정합니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. 새로고침 버튼이 있고, 다시 불러와도 받아 둔 값을 쓰며, 서버가 429(요청 과다)로 답하면 알려준 시간만큼 기다립니다. |
 | **`resume` mod + `nagne-session-hook`** | 재부팅·로그아웃·core 비정상 종료 뒤, 칸마다 돌던 Claude Code 세션을 클릭 한 번으로 이어가도록 상태바에 **Resume N agents**를 띄웁니다([재부팅 뒤 이어가기](#재부팅-뒤-이어가기) 참고). |
 | **`providers` mod** | **Providers 창**(`Ctrl+Shift+U` 또는 상태바 톱니 버튼). Claude·Codex·Grok·OpenRouter를 켜고 끄고, 각 CLI의 로그인 상태를 보고, **로그인·로그아웃**합니다(로그인은 각 회사 CLI가 herdr 탭에서 진행). OpenRouter 사용량 키와 워커 모델도 여기서 정합니다. |
 | **`projects` mod** | 왼쪽에 프로젝트 폴더 목록을 최근 수정 순으로 보여줍니다. 클릭하면 그 폴더에서 작업 중인 Space로 가고, 없으면 새로 엽니다. ×로 목록에서 숨길 수 있고, 디스크의 폴더는 건드리지 않습니다. |
@@ -87,7 +87,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.3.1`을 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.3.2`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
@@ -193,7 +193,7 @@ herdr는 워커를 제한하지 않습니다. `hc run`은 평범한 터미널 �
 
 | 프로바이더 | 상태바 | 쓰는 로그인 | 워커 템플릿 |
 |---|---|---|---|
-| Claude | 5시간·주간 막대 | Claude Code 로그인 | `explore` |
+| Claude | 5시간·주간 막대, 주간 한도가 따로 있는 모델마다 막대 하나 더(예: `Fable`) | Claude Code 로그인 | `explore` |
 | Codex | 5시간·주간 막대 | Codex CLI 로그인 | `spec-check`, `astra-review` |
 | Grok | `grok usage`가 값을 주면 표시, 아니면 `/usage` 안내(그때는 grok 안에서만 구독 사용량을 볼 수 있음) | Grok CLI 로그인(`grok login`) | `grok-explore` (plan 모드) |
 | OpenRouter | 키 잔액(한도가 있으면 막대와 `$ left`, 없으면 `$ used`) | 상태바: `keyFile`의 파일, 없으면 `keyEnv`의 환경변수. 워커: opencode 자체 로그인(`opencode auth login openrouter`) | `openrouter-explore` (opencode, plan 에이전트). 모델은 `OPENROUTER_MODEL` 또는 창의 Worker model(예: `qwen/qwen3-coder`) |

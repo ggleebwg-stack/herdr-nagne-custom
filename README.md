@@ -37,7 +37,7 @@ It fetches the newest version, replaces only the files that changed, and prints 
 |---|---|---|
 | 🧭 | **`supervisor` layout** | herdr's main layout plus a right-hand **worker column**. It opens by itself when a sub-agent starts and closes when the last one ends. `Ctrl+Shift+A` toggles it. |
 | 👀 | **`workers` mod** | A chip for each live sub-agent at the top of that column. Click a chip to pin that worker's terminal below it. Each chip also has peek and kill buttons. |
-| 📊 | **`status-plus` mod** | herdr's status bar plus a **usage chip per provider**. Claude and Codex show 5-hour and weekly bars, OpenRouter shows the key's credit, and Grok shows what its CLI reports. You choose the providers in `providers.json`. The bars are green below 80%, yellow from 80% and red from 90%, and show when they reset. There is a refresh button, a cache that survives reloads, and 429 back-off. |
+| 📊 | **`status-plus` mod** | herdr's status bar plus a **usage chip per provider**. Claude and Codex show 5-hour and weekly bars (Claude adds one for each model with its own weekly limit, such as Fable), OpenRouter shows the key's credit, and Grok shows what its CLI reports. You choose the providers in `providers.json`. The bars are green below 80%, yellow from 80% and red from 90%, and show when they reset. There is a refresh button, a cache that survives reloads, and 429 back-off. |
 | ⏯️ | **`resume` mod + `nagne-session-hook`** | After a reboot, logout or core crash, a **Resume N agents** chip offers to continue the Claude Code sessions that were running in your panes, each with one click (see [Resume after a reboot](#resume-after-a-reboot)). |
 | ⚙️ | **`providers` mod** | A **Providers window** (`Ctrl+Shift+U`, or the gear in the status bar): switch Claude, Codex, Grok and OpenRouter on or off, see whether each CLI is signed in, **sign in or out** (the vendor's own login runs in a herdr tab), and set the OpenRouter usage key and worker model. |
 | 📁 | **`projects` mod** | A sidebar list of your project folders, newest first. Clicking a folder jumps to the space already working there, or opens one. Hover × hides a folder; nothing on disk is touched. |
@@ -91,7 +91,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.3.1` to the end to install a given release. There is nothing to clone.
+Add `#v0.3.2` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -212,7 +212,7 @@ The file keeps one provider per line, so it stays easy to edit by hand too:
 
 | Provider | Status bar | Login it uses | Worker template |
 |---|---|---|---|
-| Claude | 5h and weekly bars | Claude Code's login (`claude`) | `explore` |
+| Claude | 5h and weekly bars, plus a bar per model with its own weekly limit (e.g. `Fable`) | Claude Code's login (`claude`) | `explore` |
 | Codex | 5h and weekly bars | Codex CLI's login (`codex login`) | `spec-check`, `astra-review` |
 | Grok | the plan's usage when `grok usage` can report it. Otherwise the chip says `/usage`: Grok then shows plan usage only inside grok | Grok CLI's login (`grok login`) | `grok-explore` (`--permission-mode plan`) |
 | OpenRouter | the key's credit: a bar and `$ left` when the key has a limit, else `$ used` | status bar: the file named by `keyFile`, else the variable named by `keyEnv`. Workers: opencode's own login (`opencode auth login openrouter`) | `openrouter-explore` (opencode, plan agent), model from `OPENROUTER_MODEL` or the window's Worker model, e.g. `qwen/qwen3-coder` |
