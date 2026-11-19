@@ -1,0 +1,29 @@
+{
+  "name": "herdr-nagne-custom",
+  "version": "0.3.0",
+  "description": "herdr customization kit: supervise agent workers, usage bars, providers, resume after reboot",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ggleebwg-stack/herdr-nagne-custom.git"
+  },
+  "bin": {
+    "herdr-nagne-custom": "bin/install.js"
+  },
+  "files": [
+    "bin/",
+    "mods/",
+    "layouts/",
+    "templates/",
+    "hw",
+    "nagne-session-hook",
+    "providers.example.json",
+    "keys.snippet.json",
+    "claude-hooks.snippet.json",
+    "LICENSE-Lucide.txt",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

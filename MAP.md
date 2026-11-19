@@ -15,6 +15,12 @@ herdr-nagne-custom/
 │   │   ├── main.js
 │   │   ├── mod.json           cloned_from: workspace-status (herdr-app 0.1.16)
 │   │   └── refresh.svg
+│   ├── providers/             Providers window: on/off, sign in/out, OpenRouter key and model
+│   │   ├── main.js
+│   │   └── mod.json           opens as a window (Ctrl+Shift+U, or the gear in status-plus)
+│   ├── resume/                "Resume agents" list after herdr-core restarted
+│   │   ├── main.js
+│   │   └── mod.json           opens as a dialog from status-plus's Resume chip or its notification
 │   ├── projects/              sidebar list of project folders
 │   │   ├── main.js
 │   │   ├── mod.json
@@ -35,13 +41,16 @@ herdr-nagne-custom/
 │   ├── spec-check.md          provider codex: codex --no-daemon -s read-only
 │   └── astra-review.md        provider codex: codex --no-daemon -m <model> -s read-only
 ├── hw                         worker launcher (bash)  -> ~/.local/bin/hw
+├── nagne-session-hook         Claude Code SessionStart/SessionEnd hook (bash)  -> ~/.local/bin/
+├── claude-hooks.snippet.json  the two hook entries to add to ~/.claude/settings.json by hand
 ├── providers.example.json     which providers are on, where keys come from  -> ~/.config/herdr-nagne/providers.json (once)
 ├── keys.snippet.json          key bindings to merge into ~/.config/herdr-app/keys.json by hand
+├── bin/install.js             the installer run by npx: repo -> this machine (moves replaced files to ~/.herdr-config-backup/<time>/)
+├── package.json               npx entry point and the files it ships
 ├── scripts/
-│   ├── install.sh             repo -> this machine (moves replaced files to ~/.herdr-config-backup/<time>/)
 │   ├── export.sh              this machine -> repo (writes the projects root back as ~/Projects)
 │   ├── add-machine.sh         another computer over Tailscale -> ~/.ssh/config + hc machine add
-│   └── paths.sh               shared paths and the list of mods, sourced by both scripts
+│   └── paths.sh               shared paths and the list of mods, sourced by export.sh
 ├── docs/                      README screenshots (taken from a demo project)
 ├── README.md, README.ko.md    overview and install guide
 ├── MAP.md, MAP.ko.md          this file
@@ -77,7 +86,7 @@ root (row)
 ```
  terminal in herdr ── hw <template> <name> "<task>" ──► templates/<template>.md
                                                           │ provider: off in providers.json? -> refused
-                                                          │ ${VAR} in command: from the environment
+                                                          │ ${VAR} in command: environment, else the provider's "env"
                                                           │ command + prompt (one line)
                                                           ▼
                                     hc run --bg --name <name> -- <command> "<prompt>"
@@ -93,22 +102,38 @@ root (row)
 | Mod | Reads | Writes / runs | Shared state keys |
 |---|---|---|---|
 | workers | `terminals()`, `layout()` | `layout.set`, `layout.show` / `layout.hide` (the watch column), `terminal.peek`, `terminal.kill` | none |
-| status-plus | `~/.config/herdr-nagne/providers.json`, `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json`, the OpenRouter key (`keyEnv` / `keyFile`) | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage`, `openrouter.ai/api/v1/key`; runs `grok usage --json` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
+| status-plus | watches `~/.config/herdr-nagne/` (refreshes on change); `sessions/*.jsonl` + `hc ls` / `hc get` to find agents to resume; `providers.json`, `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json`, the OpenRouter key (`keyEnv` / `keyFile`) | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage`, `openrouter.ai/api/v1/key`; runs `grok usage --json` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
+| providers | `~/.config/herdr-nagne/providers.json`, `openrouter.key`; runs `claude auth status`, `codex login status`, `opencode auth list`; reads whether `~/.grok/auth.json` holds a login | writes `providers.json` (one provider per line) and `openrouter.key`; `terminal.open` a tab with the CLI's login; runs the CLI's logout; `app.settings` (Machines) | clears `status-plus.usage.<provider>` when a login changes |
+| resume | shared `resume.candidates` | `hc get` (re-check the pane), `hc send <terminal> "claude --resume <id>"`, `pane.focus`; appends a dismiss line to `sessions/<terminal>.jsonl` | `resume.sent`, `resume.candidates` |
 | projects | folder names under `props.root` (PowerShell / `ls`), `spaces()`, `panes()` | `space.select`, `space.new` | `projects.hidden` |
 | skills | `~/.claude/skills`, `<repo>/.claude/skills`, `~/.claude/plugins/installed_plugins.json` | `hc send --if idle <agent> "/skill args"` | none |
 | agent-folders | `agents()`, `terminals()`, `spaces()`, `panes()`, `layout()` | `hc label <terminal> agentfolders.folder=…`, `pane.focus`, `terminal.peek`, `terminal.pin`, `layout.resize` | `agentFolders`, `sidebar.width`, `sidebar.collapsed` |
 
 Shared state lives in herdr's `~/.config/herdr-app/shared.json`. The scripts never copy or back it up, so hidden projects and agent folders stay on each machine.
 
+## Resume after a reboot
+
+```
+ claude in a herdr pane (env HC_TERMINAL_ID=t7)
+   SessionStart / SessionEnd ──► nagne-session-hook ──► ~/.config/herdr-nagne/sessions/t7.jsonl  (append only)
+                                                          {"e":"start","app":"claude","id":…,"cwd":…,"at":…}
+
+ reboot: herdr-core gives pane t7 a fresh shell, same address
+   status-plus  scanSessions(): open session (start without end/dismiss)
+                + hc ls: t7 exists, no parent, no agent status
+                + hc get t7: foreground is a shell          ──► shared resume.candidates ──► "Resume 1 agent" chip
+   resume mod   click Resume: hc get again ──► hc send t7 "claude --resume <id>"  (cd first if the folder differs)
+```
+
 ## Install and export flow
 
 ```
-            scripts/install.sh                         scripts/export.sh
+   npx github:ggleebwg-stack/herdr-nagne-custom        scripts/export.sh
  repo ───────────────────────────► machine   machine ─────────────────────────► repo
  mods/*            → ~/.config/herdr-app/mods/          (same paths, reversed)
  layouts/*.json    → ~/.config/herdr-app/layouts/       projects root → "~/Projects"
  templates/*.md    → herdr-core templates folder        keys.json / settings.json never exported
- hw                → ~/.local/bin/hw
+ hw, nagne-session-hook → ~/.local/bin/
  providers.example.json → ~/.config/herdr-nagne/providers.json (only if missing)   providers.json never exported
  keys.snippet.json → (merge by hand)
 ```

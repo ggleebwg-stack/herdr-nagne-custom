@@ -7,6 +7,10 @@
     "ctrl-shift-h": {
       "command": "tab.new",
       "args": { "name": "History", "mod": "history" }
+    },
+    "ctrl-shift-u": {
+      "command": "mod.open",
+      "args": { "name": "providers" }
     }
   },
   "layout:supervisor": {

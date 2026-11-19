@@ -1,18 +1,25 @@
 // Status bar: herdr's shipped workspace-status (cloned, Apache-2.0) plus usage chips for the
 // providers switched on in ~/.config/herdr-nagne/providers.json (Claude, Codex, Grok, OpenRouter)
-// and History/Skills buttons.
+// and History/Skills buttons, and a "Resume N agents" chip after herdr-core restarted (the list is the
+// resume mod).
 // Network: only each vendor's own usage endpoint, with the login its CLI already keeps
 // (~/.claude/.credentials.json or the macOS keychain; ~/.codex/auth.json) or, for OpenRouter, the key
 // named in providers.json (an environment variable or a file). Grok is asked through its own CLI
 // (`grok usage --json`). Tokens and keys are never stored or logged.
 import { View, div, svg } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, agents, theme, run, window, keys, exec, home, readTextFile, shared, setShared } from "herdr";
+import { spaces, agents, theme, run, window, keys, exec, hc, home, readTextFile, writeTextFile, shared, setShared, watchFolder, notify } from "herdr";
+import * as fs from "fs/promises";
 
 // The usage endpoints are rate limited; five minutes is fresh enough for a status bar.
 const REFRESH_MS = 5 * 60 * 1000;
 const WIN = /^[A-Za-z]:/.test(home());
-const CONFIG = `${home()}/.config/herdr-nagne/providers.json`;
+const DIR = `${home()}/.config/herdr-nagne`;
+const CONFIG = `${DIR}/providers.json`;
+// Claude sessions noted by nagne-session-hook, one log per herdr terminal (see scanSessions).
+const SESSIONS = `${DIR}/sessions`;
+const SHELL = /^(powershell|pwsh|cmd|bash|zsh|fish|sh|dash|ksh|nu)(\.exe)?$/i;
+const SCAN_MS = 30 * 1000;
 const NAMES = { claude: "Claude", codex: "Codex", grok: "Grok", openrouter: "OpenRouter" };
 // Without a providers.json the bar shows what it always showed.
 const DEFAULT_CONFIG = { claude: { enabled: true }, codex: { enabled: true } };
@@ -123,6 +130,23 @@ async function fetchUsage(key, cfg) {
   return { windows, note: p.note?.(d) ?? null };
 }
 
+// The session a terminal's log leaves open: the last start whose id has no later end or dismiss.
+// A nested `claude -p` opens and closes its own id, so the pane's session stays the open one.
+function openSession(text) {
+  const closed = new Set();
+  for (const line of (text ?? "").trim().split(/\r?\n/).reverse()) {
+    let j; try { j = JSON.parse(line); } catch { continue; }
+    if (j.e === "start" && !closed.has(j.id)) return j;
+    if (j.e === "end" || j.e === "dismiss") closed.add(j.id);
+  }
+  return null;
+}
+
+const hcJson = async (args) => {
+  const r = await hc([...args, "--json"]).catch(() => null);
+  try { return r?.code === 0 ? JSON.parse(r.stdout) : null; } catch { return null; }
+};
+
 function untilText(ms) {
   // Two units, spaced, the second zero-padded so the columns keep their width: "4d 21h", "2h 05m", "36m".
   const mins = Math.max(0, Math.round((ms - Date.now()) / 60000));
@@ -137,6 +161,19 @@ export default class StatusPlus extends View {
     this.usage = {};
     this.refresh(cx);
     cx.timer.every(REFRESH_MS, (cx) => this.refresh(cx));
+    // A change to providers.json (by hand or from the Providers window) shows at once. The
+    // Providers window drops a provider's cached usage when its login changes, so it is asked again.
+    cx.spawn(async (cx) => {
+      for (;;) {
+        const changed = await watchFolder(DIR).catch(() => null);
+        if (!changed?.length) return; // no such folder yet, or this copy closed
+        const inSessions = (p) => /[\\/]sessions([\\/]|$)/.test(p);
+        if (changed.some((p) => !inSessions(p))) this.refresh(cx);
+        if (changed.some((p) => !/[\\/](providers\.json|openrouter\.key)$/.test(p))) this.scanSessions(cx);
+      }
+    });
+    this.scanSessions(cx);
+    cx.timer.every(SCAN_MS, (cx) => this.scanSessions(cx));
     // The History button needs the separately installed `history` mod.
     cx.spawn(async (cx) => {
       this.hasHistory = await readTextFile(`${home()}/.config/herdr-app/mods/history/mod.json`).then(() => true, () => false);
@@ -147,7 +184,7 @@ export default class StatusPlus extends View {
   // The last good answer is kept in shared (persisted) state: a mod reload or app restart
   // reuses it instead of calling again (the Claude endpoint answers 429 to rapid calls),
   // and a failed call keeps showing it, marked stale in the tooltip. A click forces a call.
-  // providers.json is read on every refresh, so an edit shows on the next refresh or click.
+  // providers.json is read on every refresh.
   refresh(cx, force = false) {
     cx.spawn(async (cx) => {
       const raw = await readTextFile(CONFIG).catch(() => null);
@@ -188,6 +225,59 @@ export default class StatusPlus extends View {
       this.usage[key] = r.error && cached?.windows ? { ...cached, stale: r.error } : r;
       cx.notify();
     });
+  }
+
+  // Agents to resume: a terminal whose log has an open Claude session, that still exists, isn't a
+  // worker, and now shows a plain shell (after a reboot herdr-core gives each kept pane a shell in
+  // its last folder, same address). Asked of the core itself, not the app's live lists, so a window
+  // that is still connecting can't make a running agent look gone. Logs of terminals that no longer
+  // exist are emptied. The list goes to shared state; the resume mod acts on it.
+  scanSessions(cx) {
+    if (this.scanning) return;
+    this.scanning = true;
+    cx.spawn(async (cx) => {
+      try {
+        const files = (await fs.readdir(SESSIONS).catch(() => [])).filter((f) => /^t[0-9a-z]+\.jsonl$/.test(f));
+        const ls = files.length ? await hcJson(["ls"]) : [];
+        if (!ls) return; // core not reachable: decide nothing
+        const live = new Map((Array.isArray(ls) ? ls : ls.terminals ?? []).map((t) => [t.address, t]));
+        const sent = shared("resume.sent") ?? {};
+        const found = [];
+        for (const f of files) {
+          const address = f.slice(0, -6);
+          const path = `${SESSIONS}/${f}`;
+          const text = await readTextFile(path).catch(() => null);
+          const term = live.get(address);
+          if (!term) { if (text) await writeTextFile(path, "", text).catch(() => null); continue; }
+          const s = openSession(text);
+          if (!s || term.parent || term.status || Date.now() - (sent[address] ?? 0) < 120000) continue;
+          const fg = (await hcJson(["get", address]))?.foreground;
+          if (!SHELL.test(fg?.name ?? "")) continue;
+          const space = spaces().find((x) => x.id === term.labels?.["herdr.space"]);
+          found.push({ terminal: address, app: s.app, id: s.id, cwd: s.cwd, at: s.at, where: space?.name ?? "" });
+        }
+        if (JSON.stringify(found) !== JSON.stringify(shared("resume.candidates") ?? [])) setShared("resume.candidates", found);
+        // One note per session, the first time it can be resumed.
+        const told = shared("resume.told") ?? [];
+        const fresh = found.filter((c) => !told.includes(c.id));
+        if (fresh.length) {
+          setShared("resume.told", [...told, ...fresh.map((c) => c.id)].slice(-50));
+          notify({ title: "Resume agents", body: `${found.length} Claude session${found.length > 1 ? "s were" : " was"} running before herdr-core restarted. Click to choose.`,
+            level: "info", action: { name: "mod.open", args: { name: "resume" } } });
+        }
+      } finally {
+        this.scanning = false;
+        cx.notify();
+      }
+    });
+  }
+
+  resumeChip(t) {
+    const n = (shared("resume.candidates") ?? []).length;
+    return div().id("resume-open").px(8).py(1).rounded(5).border_1().border_color(t.accent).text_color(t.accent)
+      .tooltip("Agents that were running before herdr-core restarted (reboot, logout). Click to choose which to resume.")
+      .hover((s) => s.bg(t.hover)).on_click(() => run("mod.open", { name: "resume" }))
+      .child(`Resume ${n} agent${n > 1 ? "s" : ""}`);
   }
 
   // The palette key as actually bound, not a hardcoded one; without a
@@ -247,6 +337,14 @@ export default class StatusPlus extends View {
       .child(svg(busy ? "mods/workspace-chrome/spinner.svg" : "mods/status-plus/refresh.svg").size(13));
   }
 
+  // Opens the Providers window: switch providers, sign in or out, OpenRouter key and model.
+  settingsButton(t) {
+    return div().id("providers-open").p(3).rounded(4).text_color(t.muted).tooltip("Providers: switch on/off, sign in (Ctrl+Shift+U)")
+      .hover((s) => s.bg(t.hover).text_color(t.foreground))
+      .on_click(() => run("mod.open", { name: "providers" }))
+      .child(svg("mods/workspace-chrome/settings.svg").size(13));
+  }
+
   // A text button: History opens as its own tab, Skills beside the focused agent.
   button(t, id, text, tip, action) {
     return div().id(id).px(6).py(1).rounded(4).text_color(t.muted).tooltip(tip)
@@ -262,9 +360,10 @@ export default class StatusPlus extends View {
     // Quota sits bottom-left; the machine, branch, agents and buttons moved to the right.
     return h_flex().size_full().px(10).gap(16).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.muted)
       .child(h_flex().gap(8).items_center()
+        .when((shared("resume.candidates") ?? []).length > 0, (el) => el.child(this.resumeChip(t)))
         .children((this.providers ?? []).map((p) => this.quota(t, p.key, NAMES[p.key])))
         .when(Boolean(this.confError), (el) => el.child(div().id("providers-error").text_color(t.blocked).tooltip(this.confError).child("providers.json ⚠")))
-        .child(this.refreshButton(t)))
+        .child(h_flex().gap(1).items_center().child(this.refreshButton(t)).child(this.settingsButton(t))))
       .child(div().flex_1())
       .child(label(space?.machine ? "server" : "monitor", space?.machine ?? "This computer"))
       .when(Boolean(space?.branch), el => el.child(label("branch", space.branch)))

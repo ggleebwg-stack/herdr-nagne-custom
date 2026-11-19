@@ -9,6 +9,8 @@ herdr-nagne-custom/
 ├── mods/                  herdr 패널(JavaScript)              → ~/.config/herdr-app/mods/
 │   ├── workers/           워커 칩 + 고른 워커를 오른쪽 칸에 고정
 │   ├── status-plus/       상태바: 프로바이더별 사용량 칸, 새로고침, History·Skills 버튼
+│   ├── providers/         Providers 창: 켜고 끄기, 로그인·로그아웃, OpenRouter 키·모델 (Ctrl+Shift+U)
+│   ├── resume/            재부팅 뒤 "Resume agents" 목록 (status-plus의 Resume 칸이나 알림으로 열림)
 │   ├── projects/          왼쪽 프로젝트 폴더 목록
 │   ├── skills/            Claude Code 스킬 목록, 대기 중인 에이전트에 /스킬 전송
 │   └── agent-folders/     Agents 목록을 색깔 폴더로 (kiote/pi-setup 기반, 고지 파일 포함)
@@ -21,13 +23,16 @@ herdr-nagne-custom/
 │   ├── spec-check.md      Codex, 읽기 전용, 명세 대조
 │   └── astra-review.md    Codex, 읽기 전용, 설계 검토
 ├── hw                     워커 실행기(bash)                     → ~/.local/bin/hw
+├── nagne-session-hook     Claude Code 세션 시작·종료 훅(bash)    → ~/.local/bin/
+├── claude-hooks.snippet.json  ~/.claude/settings.json에 직접 추가할 훅 두 개
 ├── keys.snippet.json      keys.json에 직접 합칠 단축키
 ├── providers.example.json 켤 프로바이더와 키 위치          → ~/.config/herdr-nagne/providers.json (없을 때만)
+├── bin/install.js         npx가 실행하는 설치기: 저장소 → 이 PC (교체 파일은 ~/.herdr-config-backup/<시각>/ 으로 옮김)
+├── package.json           npx 실행 진입점과 배포 파일 목록
 ├── scripts/
-│   ├── install.sh         저장소 → 이 PC (교체 파일은 ~/.herdr-config-backup/<시각>/ 으로 옮김)
 │   ├── export.sh          이 PC → 저장소 (프로젝트 경로는 ~/Projects로 바꿔 저장)
 │   ├── add-machine.sh     Tailscale로 다른 컴퓨터 연결 (~/.ssh/config + hc machine add)
-│   └── paths.sh           두 스크립트가 함께 쓰는 경로와 mod 목록
+│   └── paths.sh           export.sh가 쓰는 경로와 mod 목록
 ├── docs/                  README 스크린샷 (데모 프로젝트로 촬영)
 ├── README.md, README.ko.md
 ├── MAP.md, MAP.ko.md      이 문서
@@ -60,7 +65,7 @@ root
 ```
 herdr 안의 터미널 ── hw <템플릿> <이름> "<작업>" ──► templates/<템플릿>.md
                                                     │ provider가 providers.json에서 꺼져 있으면 거부
-                                                    │ 명령 속 ${변수}는 환경변수로 채움
+                                                    │ 명령 속 ${변수}는 환경변수, 없으면 providers.json의 "env"로 채움
                                                     │ 명령 + 프롬프트(한 줄로)
                                                     ▼
                           hc run --bg --name <이름> -- <명령> "<프롬프트>"
@@ -81,12 +86,27 @@ herdr의 `~/.config/herdr-app/shared.json`에 저장됩니다. 설치·내보내
 |---|---|
 | `projects.hidden` | Projects에서 숨긴 폴더 이름 |
 | `agentFolders` | 에이전트 폴더 구성 |
-| `status-plus.usage.<서비스>` | 마지막으로 받은 사용량 |
+| `status-plus.usage.<서비스>` | 마지막으로 받은 사용량 (Providers 창이 로그인 변화 시 지움) |
 | `status-plus.blocked.<서비스>` | 429 응답 뒤 다시 조회할 수 있는 시각 |
+| `resume.candidates` | 이어갈 수 있는 세션 목록 (status-plus가 만들고 resume mod가 씀) |
+| `resume.sent`, `resume.told` | 방금 이어가기를 보낸 칸, 이미 알림을 띄운 세션 |
+
+세션 기록은 `~/.config/herdr-nagne/sessions/<터미널>.jsonl`에 줄 단위로 덧붙여집니다. 종료 기록이 없는 시작 기록이 "열린 세션"입니다.
+
+## 재부팅 뒤 이어가기
+
+```
+ herdr 칸의 claude (환경변수 HC_TERMINAL_ID=t7)
+   SessionStart / SessionEnd ──► nagne-session-hook ──► sessions/t7.jsonl (덧붙이기만)
+ 재부팅: herdr-core가 t7 칸을 같은 주소의 빈 셸로 되살림
+   status-plus: 열린 세션 + hc ls(칸 있음, 워커 아님, 에이전트 아님) + hc get(맨 앞이 셸) ──► "Resume 1 agent"
+   resume mod: Resume 클릭 → 다시 확인 → hc send t7 "claude --resume <id>" (폴더가 다르면 먼저 이동)
+```
 
 ## 외부 통신
 
 - **`status-plus`:** 켜 둔 프로바이더의 사용량 조회 주소만 호출합니다(`api.anthropic.com`, `chatgpt.com`, `openrouter.ai`). 로그인 정보는 각 CLI가 저장해 둔 것을, OpenRouter는 `providers.json`에 적은 환경변수나 파일의 키를 씁니다. Grok은 로컬 `grok usage --json`만 실행합니다.
+- **`providers`:** 로컬 명령만 실행합니다(각 CLI의 상태 확인·로그인·로그아웃). `providers.json`과 `openrouter.key`만 씁니다.
 - **나머지 mod:** 네트워크를 쓰지 않습니다.
 
 ## 다른 컴퓨터 연결 (Tailscale)

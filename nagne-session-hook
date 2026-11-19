@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# nagne-session-hook — Claude Code SessionStart / SessionEnd hook.
+# Notes which Claude session runs in which herdr terminal, so the status bar can offer to resume
+# it after a reboot. One line per event is appended to ~/.config/herdr-nagne/sessions/<terminal>.jsonl;
+# a session is "open" from its start line until an end line with the same id. Lines are only ever
+# appended, so a nested `claude -p` in the same terminal opens and closes its own id and leaves the
+# pane's session open. Prints nothing and always exits 0: it never gets in the session's way.
+t="${HC_TERMINAL_ID:-}"
+[[ $t =~ ^t[0-9a-z]+$ ]] || exit 0
+in=$(cat)
+get() { printf '%s' "$in" | sed -n -E 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | head -n 1; }
+id=$(get session_id)
+[[ $id =~ ^[0-9a-fA-F-]{36}$ ]] || exit 0
+# Grok reads Claude's hooks too; only Claude's own sessions (transcripts under .claude) count.
+case "$(get transcript_path)" in *.claude[/\\]*) ;; *) exit 0 ;; esac
+case "$(get hook_event_name)" in
+  SessionStart) case "$(get source)" in startup|resume|clear|compact) e=start ;; *) exit 0 ;; esac ;;
+  SessionEnd) e=end ;;
+  *) exit 0 ;;
+esac
+dir="$HOME/.config/herdr-nagne/sessions"
+mkdir -p "$dir" 2>/dev/null || exit 0
+f="$dir/$t.jsonl"
+printf '{"e":"%s","app":"claude","id":"%s","cwd":"%s","at":%s000}\n' "$e" "$id" "$(get cwd)" "$(date +%s)" >>"$f" 2>/dev/null
+# Keep the file short: only the last lines matter.
+if [ "$(wc -l <"$f" 2>/dev/null || echo 0)" -gt 200 ]; then tail -n 100 "$f" >"$f.tmp" 2>/dev/null && mv -f "$f.tmp" "$f" 2>/dev/null; fi
+exit 0

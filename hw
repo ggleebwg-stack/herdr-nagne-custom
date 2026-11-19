@@ -4,7 +4,8 @@
 # usage: hw <template> <name> "<task>" [cwd]      list: hw
 # Collect results: hc wait --children all ; hc read --lines 60 <name>
 # A template's `provider:` is checked against ~/.config/herdr-nagne/providers.json (off = refused),
-# and ${VAR} in its `command:` is filled from the environment (unset = refused).
+# and ${VAR} in its `command:` is filled from the environment, else from that provider's "env"
+# in providers.json (neither = refused).
 set -euo pipefail
 HC=$(command -v hc || command -v hc.exe || echo "$(cygpath -u "${LOCALAPPDATA:-}" 2>/dev/null)/Programs/herdr-core/hc.exe")
 # Windows keeps herdr-core's config under %APPDATA%; macOS/Linux under ~/.config.
@@ -17,13 +18,18 @@ field() { awk -v k="$1" '/^---$/{n++; next} n==1 && $0 ~ "^"k":" {sub("^"k":[ ]*
 cmd=$(field command)
 prov=$(field provider)
 # providers.json keeps one provider per line: "grok": { "enabled": false, ... }
-if [ -n "$prov" ] && [ -f "$CONF" ] && grep -E "\"$prov\"[[:space:]]*:" "$CONF" | grep -q -E '"enabled"[[:space:]]*:[[:space:]]*false'; then
+line=""
+if [ -n "$prov" ] && [ -f "$CONF" ]; then line=$(grep -E "^[[:space:]]*\"$prov\"[[:space:]]*:" "$CONF" | head -n 1 || true); fi
+if printf '%s' "$line" | grep -q -E '"enabled"[[:space:]]*:[[:space:]]*false'; then
   echo "provider '$prov' is switched off in $CONF" >&2; exit 4
 fi
+# ${VAR}: the environment first, else that provider's "env": { "VAR": "value" } in providers.json
 while [[ $cmd =~ \$\{([A-Za-z_][A-Za-z0-9_]*)\} ]]; do
   v=${BASH_REMATCH[1]}
-  [ -n "${!v:-}" ] || { echo "template $1 needs \$$v; set it first (e.g. export $v=...)" >&2; exit 5; }
-  cmd=${cmd//"\${$v}"/${!v}}
+  val=${!v:-}
+  if [ -z "$val" ] && [ -n "$line" ]; then val=$(printf '%s' "$line" | sed -n -E "s/.*\"$v\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\1/p"); fi
+  [ -n "$val" ] || { echo "template $1 needs \$$v: set it in the Providers window (Ctrl+Shift+U) or export $v=..." >&2; exit 5; }
+  cmd=${cmd//"\${$v}"/$val}
 done
 body=$(awk '/^---$/{n++; next} n>=2' "$f")
 # .cmd shims (npm codex, opencode) reject line breaks in arguments: send one line

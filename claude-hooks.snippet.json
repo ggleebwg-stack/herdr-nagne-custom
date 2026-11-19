@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "bash ~/.local/bin/nagne-session-hook", "timeout": 10 } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "bash ~/.local/bin/nagne-session-hook", "timeout": 10 } ] }
+    ]
+  }
+}
