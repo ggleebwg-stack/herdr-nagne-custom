@@ -47,8 +47,10 @@ herdr-nagne-custom/
 ├── providers.example.json     which providers are on, where keys come from  -> ~/.config/herdr-nagne/providers.json (once)
 ├── keys.snippet.json          key bindings to merge into ~/.config/herdr-app/keys.json by hand
 ├── bin/install.js             the installer run by npx: repo -> this machine (moves replaced files to ~/.herdr-config-backup/<time>/)
-├── package.json               npx entry point and the files it ships
+├── bin/compat.js              the herdr versions the kit was tested with, and the ones installed here
+├── package.json               npx entry point, the files it ships, and "testedWith" (herdr-app, hc)
 ├── scripts/
+│   ├── compat-check.js        after a herdr update: do the mods load, do the commands and hc options still exist
 │   ├── export.sh              this machine -> repo (writes the projects root back as ~/Projects)
 │   └── paths.sh               shared paths and the list of mods, sourced by export.sh
 ├── docs/                      README screenshots (taken from a demo project)

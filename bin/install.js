@@ -224,6 +224,10 @@ if (!DRY) {
   }
 }
 
+// herdr updates itself; say so when it is no longer the version the kit was tested with.
+const untested = require("./compat").drift().map((v) =>
+  `${v.program} is ${v.have} here; the kit was tested with ${v.want}. If a mod or hw misbehaves, update the kit (run this again) or open an issue.`);
+
 // Remember which version is installed, so the next run can say what it updated from.
 const VERSION = require(path.join(REPO, "package.json")).version;
 const STAMP = path.join(NAGNE, "installed.json");
@@ -255,7 +259,7 @@ if (hooksTodo) steps.push("Resume after a reboot: run again with --claude-hooks 
 
 console.log(`
 ${headline}${replaced && !DRY ? ` Replaced and edited files are backed up in ${BK}` : ""}
-${onPath ? "" : `Add ${BIN} to your PATH so hw is found.\n`}${rootMissing ? `Warning: the projects folder ${root} does not exist; the Projects list will be empty. Use --projects-root <dir>.\n` : ""}${keyNotes.length ? `Key bindings left as they were:\n${keyNotes.join("\n")}\n` : ""}${checks.length ? `${checks.join("\n")}\n` : ""}Next:
+${onPath ? "" : `Add ${BIN} to your PATH so hw is found.\n`}${rootMissing ? `Warning: the projects folder ${root} does not exist; the Projects list will be empty. Use --projects-root <dir>.\n` : ""}${keyNotes.length ? `Key bindings left as they were:\n${keyNotes.join("\n")}\n` : ""}${checks.length ? `${checks.join("\n")}\n` : ""}${untested.length ? `${untested.join("\n")}\n` : ""}Next:
 ${steps.map((t, i) => `  ${i + 1}. ${t}`).join("\n")}
 More: https://github.com/ggleebwg-stack/herdr-nagne-custom`);
 if (checks.some((c) => c.startsWith("mod "))) process.exitCode = 1;

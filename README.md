@@ -91,7 +91,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.1` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.2` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -134,6 +134,7 @@ It never touches herdr's `settings.json` or an existing `providers.json`, and ed
 | A usage chip shows `—` | Hover it. `not logged in` means log in to that CLI. `rate limited` means the vendor asked to wait; the chip retries by itself. |
 | A worker sits in **blocked** | It is waiting on a prompt, usually the folder trust question. Click its chip and answer in the worker pane. |
 | A mod shows an error box | `herdr-app check ~/.config/herdr-app/mods/<name>` prints what is wrong. |
+| Something stopped working after herdr updated itself | Run the `npx` line again: it fetches the newest kit and says so when your herdr is not the version the kit was tested with. If it still fails, open an issue with that line. |
 
 ## Supervising workers
 

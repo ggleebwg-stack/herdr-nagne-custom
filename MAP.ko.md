@@ -29,8 +29,10 @@ herdr-nagne-custom/
 ├── keys.snippet.json      keys.json에 직접 합칠 단축키
 ├── providers.example.json 켤 프로바이더와 키 위치          → ~/.config/herdr-nagne/providers.json (없을 때만)
 ├── bin/install.js         npx가 실행하는 설치기: 저장소 → 이 PC (교체 파일은 ~/.herdr-config-backup/<시각>/ 으로 옮김)
-├── package.json           npx 실행 진입점과 배포 파일 목록
+├── bin/compat.js          키트를 검증한 herdr 버전과 이 PC에 설치된 버전
+├── package.json           npx 실행 진입점, 배포 파일 목록, "testedWith" (herdr-app, hc)
 ├── scripts/
+│   ├── compat-check.js    herdr 업데이트 후 점검: mod 로드, 명령과 hc 옵션이 그대로 있는지
 │   ├── export.sh          이 PC → 저장소 (프로젝트 경로는 ~/Projects로 바꿔 저장)
 │   └── paths.sh           export.sh가 쓰는 경로와 mod 목록
 ├── docs/                  README 스크린샷 (데모 프로젝트로 촬영)
