@@ -1,0 +1,11 @@
+# The kit has no npm dependencies and no workflows today; this keeps both covered once it does.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
