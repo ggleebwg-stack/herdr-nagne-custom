@@ -35,8 +35,8 @@ herdr-nagne-custom/
 ├── layouts/
 │   └── supervisor.json        the window layout that wires the mods together  -> ~/.config/herdr-app/layouts/
 ├── templates/                 worker templates  -> %APPDATA%\herdr-core\templates\ (Windows)
-│   ├── explore.md             provider claude: claude --model haiku --permission-mode plan   ~/.config/herdr-core/templates/ (macOS/Linux)
-│   ├── grok-explore.md        provider grok: grok --permission-mode plan --no-subagents
+│   ├── explore.md             provider claude: claude --model haiku --permission-mode plan --tools Read,Grep,Glob   ~/.config/herdr-core/templates/ (macOS/Linux)
+│   ├── grok-explore.md        provider grok: grok --permission-mode plan --no-subagents --sandbox read-only (no shell)
 │   ├── openrouter-explore.md  provider openrouter: opencode run --agent plan -m openrouter/${OPENROUTER_MODEL}
 │   ├── spec-check.md          provider codex: codex --no-daemon -s read-only
 │   └── astra-review.md        provider codex: codex --no-daemon -m <model> -s read-only
@@ -132,10 +132,12 @@ Shared state lives in herdr's `~/.config/herdr-app/shared.json`. The scripts nev
  repo ───────────────────────────► machine   machine ─────────────────────────► repo
  mods/*            → ~/.config/herdr-app/mods/          (same paths, reversed)
  layouts/*.json    → ~/.config/herdr-app/layouts/       projects root → "~/Projects"
+                     (keeps your projects root, or --projects-root)
  templates/*.md    → herdr-core templates folder        keys.json / settings.json never exported
  hw, nagne-session-hook → ~/.local/bin/
  providers.example.json → ~/.config/herdr-nagne/providers.json (only if missing)   providers.json never exported
- keys.snippet.json → (merge by hand)
+ keys.snippet.json → keys.json, with --keys (else by hand)
+ claude-hooks.snippet.json → ~/.claude/settings.json, with --claude-hooks
 ```
 
 ## Other computers (Tailscale)

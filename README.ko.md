@@ -31,7 +31,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 | **`projects` mod** | 왼쪽에 프로젝트 폴더 목록을 최근 수정 순으로 보여줍니다. 클릭하면 그 폴더에서 작업 중인 Space로 가고, 없으면 새로 엽니다. ×로 목록에서 숨길 수 있고, 디스크의 폴더는 건드리지 않습니다. |
 | **`skills` mod** | Claude Code 스킬(개인·프로젝트·플러그인)을 보여주고, `/스킬 인자`를 **대기 중인 에이전트에게만** 보냅니다. |
 | **`agent-folders` mod** | Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. [kiote의 mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders)에서 Windows 작업표시줄 점 표시만 뺐습니다. |
-| **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다. `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
+| **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다([지켜지는 방식](#읽기-전용은-어떻게-지켜지나)). `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
 | **`scripts/add-machine.sh`** | **Tailscale**로 연결되는 집·회사 컴퓨터를 herdr-core에 추가합니다. 이 창에서 그 컴퓨터의 에이전트를 띄우고 볼 수 있습니다. |
 
 ## 설치
@@ -66,9 +66,18 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 ```bash
 npx github:ggleebwg-stack/herdr-nagne-custom --dry-run   # 추가·교체될 파일을 먼저 보여줌
 npx github:ggleebwg-stack/herdr-nagne-custom             # 교체되는 파일은 ~/.herdr-config-backup/<시각>/ 으로 옮겨 둠(삭제 안 함)
+npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --claude-hooks   # 아래 4단계의 1·2·4번까지 처리
 ```
 
-특정 릴리스를 설치하려면 끝에 `#v0.3.0`을 붙입니다. 저장소를 받을 필요는 없습니다.
+| 옵션 | 하는 일 |
+|---|---|
+| `--projects-root <폴더>` | supervisor 레이아웃의 Projects 목록 폴더를 정합니다. 옵션이 없으면 업데이트할 때 이전에 정한 폴더를 그대로 두고, 처음 설치할 때는 `~/Projects`를 쓰되 그 폴더가 없으면 경고합니다 |
+| `--keys` | `keys.snippet.json`의 단축키를 `~/.config/herdr-app/keys.json`에 추가합니다. 이미 다른 동작에 쓰는 키는 그대로 두고 목록으로 알려 줍니다 |
+| `--claude-hooks` | `~/.claude/settings.json`의 SessionStart·SessionEnd에 이어가기 훅을 한 번만 덧붙입니다. 기존 훅은 그대로입니다 |
+
+`--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
+
+특정 릴리스를 설치하려면 끝에 `#v0.3.1`을 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
@@ -80,14 +89,14 @@ npx github:ggleebwg-stack/herdr-nagne-custom             # 교체되는 파일�
 | `hw`, `nagne-session-hook` | `~/.local/bin/` (이 폴더가 PATH에 있어야 함) |
 | `providers.example.json` | `~/.config/herdr-nagne/providers.json` (없을 때만) |
 
-사용자의 `keys.json`, `settings.json`, 이미 있는 `providers.json`, `~/.claude/settings.json`은 건드리지 않습니다.
+herdr의 `settings.json`과 이미 있는 `providers.json`은 건드리지 않습니다. `keys.json`과 `~/.claude/settings.json`은 `--keys`, `--claude-hooks`를 줄 때만 고칩니다.
 
 ### 4. herdr에서 마무리
 
-1. **단축키**: [`keys.snippet.json`](keys.snippet.json)의 항목을 `~/.config/herdr-app/keys.json`에 옮겨 적습니다. `global`은 기존 `global` 안에 합치고, `layout:supervisor` 구역은 새로 추가합니다.
-2. **프로젝트 폴더**: `~/.config/herdr-app/layouts/supervisor.json`에서 `"mod": "projects"`를 찾아 `"root"`를 바꿉니다. 기본값은 `"~/Projects"`입니다. Windows 경로는 `"D:\\Code"`처럼 백슬래시를 두 번 씁니다.
-3. **레이아웃**: `Ctrl+Shift+L`을 눌러 **supervisor**로 바꿉니다. 또는 `herdr-app do layout.switch '{"name":"supervisor"}'`를 실행합니다.
-4. **재부팅 뒤 이어가기**(선택): [`claude-hooks.snippet.json`](claude-hooks.snippet.json)의 훅 두 개를 `~/.claude/settings.json`에 추가합니다([재부팅 뒤 이어가기](#재부팅-뒤-이어가기) 참고).
+1. **단축키**(`--keys`로 대신 가능): [`keys.snippet.json`](keys.snippet.json)의 항목을 `~/.config/herdr-app/keys.json`에 옮겨 적습니다. `global`은 기존 `global` 안에 합치고, `layout:supervisor` 구역은 새로 추가합니다.
+2. **프로젝트 폴더**(`--projects-root`로 대신 가능): `~/.config/herdr-app/layouts/supervisor.json`에서 `"mod": "projects"`를 찾아 `"root"`를 바꿉니다. 기본값은 `"~/Projects"`입니다. Windows 경로는 `"D:\\Code"`처럼 백슬래시를 두 번 씁니다.
+3. **레이아웃**: `Ctrl+Shift+L`(macOS는 `Cmd+Shift+L`)을 눌러 **supervisor**로 바꿉니다. 또는 `herdr-app do layout.switch '{"name":"supervisor"}'`를 실행합니다.
+4. **재부팅 뒤 이어가기**(선택, `--claude-hooks`로 대신 가능): [`claude-hooks.snippet.json`](claude-hooks.snippet.json)의 훅 두 개를 `~/.claude/settings.json`에 추가합니다([재부팅 뒤 이어가기](#재부팅-뒤-이어가기) 참고).
 5. **프로바이더**: `Ctrl+Shift+U`(또는 사용량 칸 옆 톱니 버튼)로 Providers 창을 열어 켜고 끄고, 필요하면 로그인합니다([프로바이더](#프로바이더) 참고).
 6. (선택) `~/.config/herdr-app/settings.json`에서 터미널 글꼴(`"font": "D2Coding"`)이나 worktree 위치(`"worktrees": { "directory": "D:\\Code\\.worktrees" }`)를 정할 수 있습니다. Projects 목록은 점(.)으로 시작하는 폴더를 빼고 보여줍니다.
 
@@ -99,7 +108,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom             # 교체되는 파일�
 
 ### 업데이트와 삭제
 
-- **업데이트**: 같은 `npx` 명령을 다시 실행합니다. 이전 파일은 `~/.herdr-config-backup/<시각>/`에 남습니다.
+- **업데이트**: 같은 `npx` 명령을 다시 실행합니다. 실행할 때마다 최신 버전을 받아 옵니다. 바뀌지 않은 파일은 그대로 두고, 교체한 파일만 `~/.herdr-config-backup/<시각>/`으로 옮깁니다. 끝나면 `Updated from 0.3.0 to 0.3.1: skills, explore.md`처럼 바뀐 것을 알려 주고, 바뀐 것이 없으면 `Already up to date`라고 알려 줍니다. 프로젝트 폴더, `providers.json`, 단축키, 훅은 유지됩니다. 직접 고친 템플릿이나 mod는 바뀐 파일로 보고 교체합니다(원래 것은 백업에 있습니다). 내 템플릿을 지키려면 다른 이름으로 저장하세요.
 - **삭제**: `Ctrl+Shift+L`로 `main` 레이아웃으로 돌아갑니다. `~/.config/herdr-app/`에서 `mods/workers`, `mods/projects`, `mods/status-plus`, `mods/providers`, `mods/resume`, `mods/skills`, `mods/agent-folders`, `layouts/supervisor.json`을 다른 곳으로 옮기고, 추가한 단축키를 지웁니다. 화면이 깨지면 `Ctrl+Alt+Shift+Esc`로 herdr 기본 레이아웃으로 초기화할 수 있습니다.
 
 ### 문제 해결
@@ -121,6 +130,19 @@ hw explore cart-spec "Compare src/cart.js with docs/spec.md, list each mismatch"
 hc wait --children all        # 모든 워커가 끝날 때까지 대기
 hc read --lines 60 cart-spec  # 워커의 마지막 요약 읽기
 ```
+
+### 읽기 전용은 어떻게 지켜지나
+
+herdr는 워커를 제한하지 않습니다. `hc run`은 평범한 터미널 프로세스를 띄울 뿐입니다. 제한은 템플릿의 `command:` 줄에서 각 CLI에 맡기고, 프롬프트의 "수정하지 말 것"은 그 위에 얹은 당부입니다.
+
+| 템플릿 | 쓰기를 막는 것 | 확인 |
+|---|---|---|
+| `spec-check`, `astra-review` | Codex의 `-s read-only` OS 샌드박스(macOS는 Seatbelt, Linux는 bubblewrap과 seccomp). 쓰기는 `Operation not permitted`로 실패합니다 | macOS |
+| `explore` | `--tools Read,Grep,Glob`으로 Claude Code에 셸과 편집 도구를 주지 않고, `--strict-mcp-config`로 MCP 서버도 불러오지 않습니다. plan 모드만으로는 부족합니다. 편집 도구는 승인 창에서 멈추지만 `touch` 같은 셸 명령은 그대로 실행됩니다 | macOS |
+| `grok-explore` | `--sandbox read-only`(macOS는 Seatbelt, Linux는 Landlock, Windows에서는 효과 없음)와 `--disallowed-tools run_terminal_cmd`를 함께 씁니다. 그래서 어느 OS에서도 셸이 없습니다. Grok의 plan 모드도 편집 도구만 막고 셸은 막지 않습니다 | macOS |
+| `openrouter-explore` | opencode의 `plan` 에이전트가 파일 편집을 거부합니다. 셸은 opencode의 권한 규칙을 따르므로 넷 중 가장 약합니다 | 확인 안 함 |
+
+승인 창에서 멈춘 워커는 **blocked**로 표시됩니다. 그 창에 입력할 수 있으면 누구나 승인할 수 있습니다. 사용자 본인도, `hc send`·`hc keys`를 쓰는 부모 에이전트도 그렇습니다. 셸을 쓰는 템플릿을 직접 만든다면 OS 샌드박스를 함께 거세요.
 
 ### 결과는 어디로 가나
 

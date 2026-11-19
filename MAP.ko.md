@@ -17,8 +17,8 @@ herdr-nagne-custom/
 ├── layouts/
 │   └── supervisor.json    mod들을 배치한 창 레이아웃            → ~/.config/herdr-app/layouts/
 ├── templates/             워커 템플릿                           → Windows %APPDATA%\herdr-core\templates\
-│   ├── explore.md         Claude Haiku, plan 모드(읽기 전용)       macOS/Linux ~/.config/herdr-core/templates/
-│   ├── grok-explore.md    Grok, plan 모드(읽기 전용)
+│   ├── explore.md         Claude Haiku, 읽기 도구만(셸·편집 없음)       macOS/Linux ~/.config/herdr-core/templates/
+│   ├── grok-explore.md    Grok, 읽기 전용 샌드박스(셸 없음)
 │   ├── openrouter-explore.md  opencode로 OpenRouter 모델 (모델은 $OPENROUTER_MODEL)
 │   ├── spec-check.md      Codex, 읽기 전용, 명세 대조
 │   └── astra-review.md    Codex, 읽기 전용, 설계 검토

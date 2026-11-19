@@ -33,7 +33,7 @@ Then press `Ctrl+Shift+L` in herdr until the **supervisor** layout shows. Run th
 | 📁 | **`projects` mod** | A sidebar list of your project folders, newest first. Clicking a folder jumps to the space already working there, or opens one. Hover × hides a folder; nothing on disk is touched. |
 | 🧩 | **`skills` mod** | Lists your Claude Code skills (personal, project and plugin) and sends `/skill args` to an agent, **only if that agent is idle**. |
 | 🗂️ | **`agent-folders` mod** | The Agents list grouped into colored folders, with drag and drop and rules. This is [kiote's mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders) with the Windows taskbar dot removed. |
-| 🚀 | **`hw` + worker templates** | `hw <template> <name> "<task>"` starts a background worker from a template: `explore` (Claude Haiku), `grok-explore` (Grok), `openrouter-explore` (any OpenRouter model via opencode), `spec-check` and `astra-review` (Codex). All of them are read-only. A provider switched off in `providers.json` is refused. |
+| 🚀 | **`hw` + worker templates** | `hw <template> <name> "<task>"` starts a background worker from a template: `explore` (Claude Haiku), `grok-explore` (Grok), `openrouter-explore` (any OpenRouter model via opencode), `spec-check` and `astra-review` (Codex). All of them are read-only ([how that is enforced](#how-read-only-is-enforced)). A provider switched off in `providers.json` is refused. |
 | 🌐 | **`scripts/add-machine.sh`** | Adds a home or office computer you reach over **Tailscale** to herdr-core, so you can start and watch agents there from this window. |
 
 ![Usage bars](docs/usage-bars.png)
@@ -70,9 +70,18 @@ Run these in any terminal (PowerShell, Git Bash, macOS Terminal). It needs Node.
 ```bash
 npx github:ggleebwg-stack/herdr-nagne-custom --dry-run   # prints every file it would add or replace
 npx github:ggleebwg-stack/herdr-nagne-custom             # replaced files are moved to ~/.herdr-config-backup/<time>/, never deleted
+npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --claude-hooks   # also do steps 1, 2 and 4 below
 ```
 
-Add `#v0.3.0` to the end to install a given release. There is nothing to clone.
+| Option | What it does |
+|---|---|
+| `--projects-root <dir>` | sets the Projects list's folder in the supervisor layout. Without it, an update keeps the folder you set before; a fresh install uses `~/Projects` and warns if it doesn't exist |
+| `--keys` | adds the bindings in `keys.snippet.json` to `~/.config/herdr-app/keys.json`. A key you already bound to something else is kept and listed |
+| `--claude-hooks` | appends the resume hook to SessionStart and SessionEnd in `~/.claude/settings.json`, once; your other hooks stay |
+
+Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
+
+Add `#v0.3.1` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -84,14 +93,14 @@ The installer copies:
 | `hw`, `nagne-session-hook` | `~/.local/bin/`. Make sure `~/.local/bin` is on your PATH |
 | `providers.example.json` | `~/.config/herdr-nagne/providers.json`, only if you don't have one yet |
 
-It never touches your `keys.json`, `settings.json`, an existing `providers.json` or `~/.claude/settings.json`.
+It never touches herdr's `settings.json` or an existing `providers.json`, and edits `keys.json` and `~/.claude/settings.json` only when you pass `--keys` or `--claude-hooks`.
 
 ### 4. Finish in herdr
 
-1. **Keys**: copy the entries in [`keys.snippet.json`](keys.snippet.json) into `~/.config/herdr-app/keys.json` (merge `global` with your existing `global`, and add the `layout:supervisor` section).
-2. **Projects folder**: in `~/.config/herdr-app/layouts/supervisor.json`, find `"mod": "projects"` and set `"root"`. The default is `"~/Projects"`. On Windows, write a path like `"D:\\Code"` with doubled backslashes.
-3. **Layout**: press `Ctrl+Shift+L` until the **supervisor** layout shows, or run `herdr-app do layout.switch '{"name":"supervisor"}'`.
-4. **Resume after a reboot** (optional): add the two hooks in [`claude-hooks.snippet.json`](claude-hooks.snippet.json) to `~/.claude/settings.json` (see [Resume after a reboot](#resume-after-a-reboot)).
+1. **Keys** (done by `--keys`): copy the entries in [`keys.snippet.json`](keys.snippet.json) into `~/.config/herdr-app/keys.json` (merge `global` with your existing `global`, and add the `layout:supervisor` section).
+2. **Projects folder** (done by `--projects-root`): in `~/.config/herdr-app/layouts/supervisor.json`, find `"mod": "projects"` and set `"root"`. The default is `"~/Projects"`. On Windows, write a path like `"D:\\Code"` with doubled backslashes.
+3. **Layout**: press `Ctrl+Shift+L` (`Cmd+Shift+L` on macOS) until the **supervisor** layout shows, or run `herdr-app do layout.switch '{"name":"supervisor"}'`.
+4. **Resume after a reboot** (optional, done by `--claude-hooks`): add the two hooks in [`claude-hooks.snippet.json`](claude-hooks.snippet.json) to `~/.claude/settings.json` (see [Resume after a reboot](#resume-after-a-reboot)).
 5. **Providers**: press `Ctrl+Shift+U` (or the gear next to the usage chips), switch providers on or off, and sign in where needed (see [Providers](#providers)).
 6. Optional settings in `~/.config/herdr-app/settings.json`, such as a terminal font (`"font": "D2Coding"`) or where herdr puts worktrees (`"worktrees": { "directory": "D:\\Code\\.worktrees" }`). The Projects list skips dot-folders, so a `.worktrees` folder inside your projects root stays out of it.
 
@@ -103,7 +112,7 @@ It never touches your `keys.json`, `settings.json`, an existing `providers.json`
 
 ### Update and uninstall
 
-- **Update**: run the same `npx` line again. Your previous files go to `~/.herdr-config-backup/<time>/`.
+- **Update**: run the same `npx` line again; it fetches the newest version each time. Files that did not change are left alone, and the ones it replaces go to `~/.herdr-config-backup/<time>/`. It prints what changed, for example `Updated from 0.3.0 to 0.3.1: skills, explore.md`, or `Already up to date`. Your projects folder, `providers.json`, key bindings and hooks are kept. A template or mod you edited in place is replaced like any other changed file (your copy is in the backup); to keep your own template, save it under another name.
 - **Uninstall**: switch back to the `main` layout (`Ctrl+Shift+L`), then move these out of `~/.config/herdr-app/`: `mods/workers`, `mods/projects`, `mods/status-plus`, `mods/providers`, `mods/resume`, `mods/skills`, `mods/agent-folders` and `layouts/supervisor.json`. Then remove the keys you added. If the window ever looks broken, `Ctrl+Alt+Shift+Esc` resets it to herdr's default layout.
 
 ### Troubleshooting
@@ -140,6 +149,19 @@ src/cart.js breaks spec rules 2 to 5.
 ```
 
 Templates are Markdown files with `command:` (and optionally `provider:`) front matter and a prompt body. They live in `%APPDATA%\herdr-core\templates\` on Windows and `~/.config/herdr-core/templates/` elsewhere. Copy one to make your own. `${NAME}` in `command:` is filled from the environment, and `hw` refuses to start when it is unset.
+
+### How read-only is enforced
+
+herdr does not restrict a worker: `hc run` starts an ordinary terminal process. Each template's `command:` line asks the worker's own CLI to do it, and the prompt's "do not edit" is only a reminder on top.
+
+| Template | What blocks a write | Tested |
+|---|---|---|
+| `spec-check`, `astra-review` | Codex's `-s read-only` OS sandbox (Seatbelt on macOS, bubblewrap and seccomp on Linux): a write fails with `Operation not permitted` | macOS |
+| `explore` | `--tools Read,Grep,Glob` leaves Claude Code with no shell and no edit tool, and `--strict-mcp-config` loads no MCP servers. Plan mode alone is not enough: it stops the edit tools at a prompt, but a shell command such as `touch` runs | macOS |
+| `grok-explore` | `--sandbox read-only` (Seatbelt on macOS, Landlock on Linux; no effect on Windows) plus `--disallowed-tools run_terminal_cmd`, so there is no shell on any OS. Grok's plan mode blocks its edit tools but, like Claude's, not the shell | macOS |
+| `openrouter-explore` | opencode's `plan` agent denies file edits. Its shell stays under opencode's permission rules, so treat this one as the weakest | not tested |
+
+A worker that stops at a prompt shows as **blocked**. Whoever can type into its pane can answer that prompt: you, or the parent agent through `hc send` and `hc keys`. If you write your own template with a shell in it, give it an OS sandbox.
 
 ### Where the results go
 
@@ -226,7 +248,7 @@ herdr-core can run agents on another computer over ssh and show them in this win
 | `Ctrl+Shift+U` | Open the Providers window |
 | `Ctrl+Shift+J` | Open the Skills panel to the right |
 | `Ctrl+Shift+H` | Open the History tab (needs the optional history mod) |
-| `Ctrl+Shift+L` | Cycle layouts |
+| `Ctrl+Shift+L` (`Cmd+Shift+L` on macOS) | Cycle layouts |
 | `Ctrl+Alt+Shift+Esc` | herdr's escape hatch: reset to the default layout |
 
 ## Windows notes (the things that cost an afternoon)
