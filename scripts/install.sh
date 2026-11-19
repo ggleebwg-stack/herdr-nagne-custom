@@ -15,14 +15,14 @@ put() { local src="$1" dst="$2"
   run mkdir -p "$(dirname "$dst")"; run cp -r "$src" "$dst"; }
 # mod.json before main.js: a mod folder that appears without mod.json gets docked into the
 # shown layout by Herdr. Copying the whole folder at once keeps them together.
-for m in $MODS; do put "$REPO/herdr-app/mods/$m" "$APP/mods/$m"; done
-for l in $LAYOUTS; do put "$REPO/herdr-app/layouts/$l" "$APP/layouts/$l"; done
-for t in "$REPO"/herdr-core/templates/*.md; do put "$t" "$CORE_TPL/$(basename "$t")"; done
-put "$REPO/bin/hw" "$BIN/hw"; run chmod +x "$BIN/hw"
+for m in $MODS; do put "$REPO/mods/$m" "$APP/mods/$m"; done
+for l in $LAYOUTS; do put "$REPO/layouts/$l" "$APP/layouts/$l"; done
+for t in "$REPO"/templates/*.md; do put "$t" "$CORE_TPL/$(basename "$t")"; done
+put "$REPO/hw" "$BIN/hw"; run chmod +x "$BIN/hw"
 cat <<EOF
 Installed. Replaced files are in $BK (if any).
 Next:
-  1. Add the bindings in herdr-app/keys.snippet.json to $APP/keys.json
+  1. Add the bindings in keys.snippet.json to $APP/keys.json
   2. Set your projects folder: "root" in $APP/layouts/supervisor.json (default ~/Projects)
   3. Switch layout: Ctrl+Shift+L, or  herdr-app do layout.switch '{"name":"supervisor"}'
 EOF

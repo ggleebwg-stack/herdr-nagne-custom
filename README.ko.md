@@ -3,7 +3,7 @@
 **에이전트 하나를 돌리면서, 그 하위 에이전트들이 일하는 모습을 옆에서 본다.**
 [herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex 워커 감독용 화면으로 바꾸는 레이아웃 하나, mod 다섯 개, 작은 실행기입니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
 
-[English README](README.md)
+[English README](README.md) · [프로젝트 지도](MAP.ko.md): 파일 구성, 설치 위치, 연결 구조
 
 ![supervisor 레이아웃: 왼쪽은 워커 두 개를 띄운 셸, 오른쪽은 실시간 워커 칸, 아래는 사용량 막대](docs/supervisor.png)
 
@@ -58,16 +58,16 @@ scripts/install.sh             # 교체되는 파일은 ~/.herdr-config-backup/<
 
 | 저장소 | 설치 위치 |
 |---|---|
-| `herdr-app/mods/*` (mod 5개) | `~/.config/herdr-app/mods/` |
-| `herdr-app/layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
-| `herdr-core/templates/*.md` | Windows `%APPDATA%\herdr-core\templates\`, 그 밖 `~/.config/herdr-core/templates/` |
-| `bin/hw` | `~/.local/bin/hw` (이 폴더가 PATH에 있어야 함) |
+| `mods/*` (mod 5개) | `~/.config/herdr-app/mods/` |
+| `layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
+| `templates/*.md` | Windows `%APPDATA%\herdr-core\templates\`, 그 밖 `~/.config/herdr-core/templates/` |
+| `hw` | `~/.local/bin/hw` (이 폴더가 PATH에 있어야 함) |
 
 사용자의 `keys.json`과 `settings.json`은 건드리지 않습니다.
 
 ### 4. herdr에서 마무리
 
-1. **단축키**: [`herdr-app/keys.snippet.json`](herdr-app/keys.snippet.json)의 항목을 `~/.config/herdr-app/keys.json`에 옮겨 적습니다. `global`은 기존 `global` 안에 합치고, `layout:supervisor` 구역은 새로 추가합니다.
+1. **단축키**: [`keys.snippet.json`](keys.snippet.json)의 항목을 `~/.config/herdr-app/keys.json`에 옮겨 적습니다. `global`은 기존 `global` 안에 합치고, `layout:supervisor` 구역은 새로 추가합니다.
 2. **프로젝트 폴더**: `~/.config/herdr-app/layouts/supervisor.json`에서 `"mod": "projects"`를 찾아 `"root"`를 바꿉니다. 기본값은 `"~/Projects"`입니다. Windows 경로는 `"D:\\Code"`처럼 백슬래시를 두 번 씁니다.
 3. **레이아웃**: `Ctrl+Shift+L`을 눌러 **supervisor**로 바꿉니다. 또는 `herdr-app do layout.switch '{"name":"supervisor"}'`를 실행합니다.
 4. (선택) `~/.config/herdr-app/settings.json`에서 터미널 글꼴(`"font": "D2Coding"`)이나 worktree 위치(`"worktrees": { "directory": "D:\\Code\\.worktrees" }`)를 정할 수 있습니다. Projects 목록은 점(.)으로 시작하는 폴더를 빼고 보여줍니다.

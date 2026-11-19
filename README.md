@@ -3,7 +3,7 @@
 **Run one agent, watch its sub-agents work beside it.**
 A layout, five mods and a tiny launcher for [herdr](https://github.com/herdrdev/herdr-app) that turn it into a cockpit for supervising Claude Code and Codex workers. Built and used daily on Windows; the macOS paths are written but less tested.
 
-[한국어 README](README.ko.md)
+[한국어 README](README.ko.md) · [Project map](MAP.md): every file, where it installs, how the pieces connect
 
 ![The supervisor layout: a shell that launched two read-only workers on the left, the live worker column on the right, usage bars at the bottom](docs/supervisor.png)
 
@@ -62,16 +62,16 @@ The installer copies:
 
 | From | To |
 |---|---|
-| `herdr-app/mods/*` (5 mods) | `~/.config/herdr-app/mods/` |
-| `herdr-app/layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
-| `herdr-core/templates/*.md` | `%APPDATA%\herdr-core\templates\` on Windows, `~/.config/herdr-core/templates/` elsewhere |
-| `bin/hw` | `~/.local/bin/hw`. Make sure `~/.local/bin` is on your PATH |
+| `mods/*` (5 mods) | `~/.config/herdr-app/mods/` |
+| `layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
+| `templates/*.md` | `%APPDATA%\herdr-core\templates\` on Windows, `~/.config/herdr-core/templates/` elsewhere |
+| `hw` | `~/.local/bin/hw`. Make sure `~/.local/bin` is on your PATH |
 
 It never touches your `keys.json` or `settings.json`.
 
 ### 4. Finish in herdr
 
-1. **Keys**: copy the entries in [`herdr-app/keys.snippet.json`](herdr-app/keys.snippet.json) into `~/.config/herdr-app/keys.json` (merge `global` with your existing `global`, and add the `layout:supervisor` section).
+1. **Keys**: copy the entries in [`keys.snippet.json`](keys.snippet.json) into `~/.config/herdr-app/keys.json` (merge `global` with your existing `global`, and add the `layout:supervisor` section).
 2. **Projects folder**: in `~/.config/herdr-app/layouts/supervisor.json`, find `"mod": "projects"` and set `"root"`. The default is `"~/Projects"`. On Windows, write a path like `"D:\\Code"` with doubled backslashes.
 3. **Layout**: press `Ctrl+Shift+L` until the **supervisor** layout shows, or run `herdr-app do layout.switch '{"name":"supervisor"}'`.
 4. Optional settings in `~/.config/herdr-app/settings.json`, such as a terminal font (`"font": "D2Coding"`) or where herdr puts worktrees (`"worktrees": { "directory": "D:\\Code\\.worktrees" }`). The Projects list skips dot-folders, so a `.worktrees` folder inside your projects root stays out of it.
