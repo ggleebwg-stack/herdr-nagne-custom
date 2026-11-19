@@ -44,7 +44,7 @@ It fetches the newest version, replaces only the files that changed, and prints 
 | 🧩 | **`skills` mod** | Lists your Claude Code skills (personal, project and plugin) and sends `/skill args` to an agent, **only if that agent is idle**. |
 | 🗂️ | **`agent-folders` mod** | The Agents list grouped into colored folders, with drag and drop and rules. This is [kiote's mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders) with the Windows taskbar dot removed. |
 | 🚀 | **`hw` + worker templates** | `hw <template> <name> "<task>"` starts a background worker from a template: `explore` (Claude Haiku), `grok-explore` (Grok), `openrouter-explore` (any OpenRouter model via opencode), `spec-check` and `astra-review` (Codex). All of them are read-only ([how that is enforced](#how-read-only-is-enforced)). A provider switched off in `providers.json` is refused. |
-| 🌐 | **`scripts/add-machine.sh`** | Adds a home or office computer you reach over **Tailscale** to herdr-core, so you can start and watch agents there from this window. |
+| 🌐 | **`herdr-link`** | Links your computers over **Tailscale** with no ssh server: `herdr-link on` on one, `herdr-link add` on the other, and you start and watch agents there from this window. Only devices signed in as your Tailscale user get in. |
 
 ![Usage bars](docs/usage-bars.png)
 
@@ -91,7 +91,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.3.2` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.0` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -100,7 +100,7 @@ The installer copies:
 | `mods/*` (7 mods) | `~/.config/herdr-app/mods/` |
 | `layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
 | `templates/*.md` | `%APPDATA%\herdr-core\templates\` on Windows, `~/.config/herdr-core/templates/` elsewhere |
-| `hw`, `nagne-session-hook` | `~/.local/bin/`. Make sure `~/.local/bin` is on your PATH |
+| `hw`, `nagne-session-hook`, `herdr-link` | `~/.local/bin/`. Make sure `~/.local/bin` is on your PATH |
 | `providers.example.json` | `~/.config/herdr-nagne/providers.json`, only if you don't have one yet |
 
 It never touches herdr's `settings.json` or an existing `providers.json`, and edits `keys.json` and `~/.claude/settings.json` only when you pass `--keys` or `--claude-hooks`.
@@ -236,19 +236,24 @@ Claude Code only, for now. Codex has no SessionEnd hook and asks you to trust ea
 
 ## Other computers over Tailscale
 
-herdr-core can run agents on another computer over ssh and show them in this window. With [Tailscale](https://tailscale.com) on both computers, home and office reach each other without opening ports.
+With [Tailscale](https://tailscale.com) on your computers (same account), herdr on one can run and show agents on another. `herdr-link`, installed with the kit, connects them **without an ssh server**: no Remote Login on macOS, no OpenSSH Server on Windows, no keys or passwords.
 
-1. **On the other computer**:
-   - Install Tailscale and sign in with the same account.
-   - Turn on ssh. On macOS that is System Settings › General › Sharing › **Remote Login**; allow only your user. On Linux, run an ssh server.
-2. **On this computer**, in Git Bash or a macOS terminal inside a clone of this repository (`git clone https://github.com/ggleebwg-stack/herdr-nagne-custom`): `scripts/add-machine.sh home-mac <tailscale-name> <user>`. The tailscale-name is what `tailscale status` shows, or its `100.x` address. The script:
-   - checks for an ssh key;
-   - adds a `Host` block to `~/.ssh/config`, after copying the old file to `~/.ssh/config.bak-<time>`;
-   - tests the login. If the login fails, it prints the exact line to paste on the other computer, which adds this computer's public key to `~/.ssh/authorized_keys`;
-   - runs `hc machine add`, which offers to install herdr-core there when it's missing.
-3. **Use it**: in herdr, open a new space on that machine, or run `hc run --on home-mac -- claude` from any terminal. Its terminals are addressed as `home-mac/t7`, so `hc read home-mac/t7` works like a local one.
+1. **On each computer you want to reach**: `herdr-link on` (Git Bash on Windows). It prints the line for step 2.
+2. **On the computer you sit at**: `herdr-link add <name> <tailscale-name>`, for example `herdr-link add office bob-office-pc`. Do it on both computers to control each from the other.
+3. **Use it**: in herdr, open a new space on that machine and click through its terminals like local ones, or run `hc run --on office -- claude`. Its terminals are addressed as `office/t7`, so `hc read office/t7` works like a local one.
 
-`hc machine ls` lists the machines you added. `hc machine rm <name>` forgets one; its terminals keep running there.
+`herdr-link status` shows what is on here. `herdr-link off` undoes `on`. `hc machine ls` lists the machines you added and `hc machine rm <name>` forgets one.
+
+**How it works, and who gets in**
+
+- `on` starts a small bridge that listens on `127.0.0.1:47711` only (so the OS firewall has nothing to ask), keeps it running after a restart (a LaunchAgent on macOS, a Startup item on Windows), and adds a `tailscale serve` rule: Tailscale itself accepts connections to port 47710 on this computer's tailnet address and hands them to the bridge. Nothing listens on your home or office network.
+- For each connection the bridge asks Tailscale who is calling (`tailscale whois`). It lets in only devices signed in as **the same Tailscale user** as this computer, and refuses tagged devices (servers), shared-in devices and anything it can't identify. Then it runs `herdr-core connect` for that connection, the same thing herdr runs over ssh.
+- So any device signed in to your Tailscale account can drive the terminals of a computer where `herdr-link` is on. Keep that account's devices to the ones you trust, and run `herdr-link off` where you don't want this.
+- `add` saves the machine in herdr as a `--via` command (`node ~/.local/bin/herdr-link dial <host>`), the hook herdr-core offers for reaching a machine without ssh.
+
+Tested on macOS; the Windows side (Startup item, paths) is written but not yet tested.
+
+**Phone**: herdr's phone app connects to each computer by ssh only, so `herdr-link` does not cover it. To use the phone app, that computer needs an ssh server reachable over Tailscale (macOS: Remote Login; Linux: sshd or Tailscale SSH).
 
 ## Keys
 

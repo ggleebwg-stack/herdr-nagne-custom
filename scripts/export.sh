@@ -14,4 +14,5 @@ for l in $LAYOUTS; do sed 's/"root": "[^"]*"/"root": "~\/Projects"/' "$APP/layou
 cp "$CORE_TPL"/*.md "$REPO/templates/"
 cp "$BIN/hw" "$REPO/hw"
 cp "$BIN/nagne-session-hook" "$REPO/nagne-session-hook"
+cp "$BIN/herdr-link" "$REPO/herdr-link"
 echo "exported to $REPO; now: git -C \"$REPO\" diff --stat"

@@ -24,6 +24,7 @@ herdr-nagne-custom/
 │   └── astra-review.md    Codex, 읽기 전용, 설계 검토
 ├── hw                     워커 실행기(bash)                     → ~/.local/bin/hw
 ├── nagne-session-hook     Claude Code 세션 시작·종료 훅(bash)    → ~/.local/bin/
+├── herdr-link             Tailscale로 컴퓨터 연결(ssh 없음): 중계 + tailscale serve → ~/.local/bin/
 ├── claude-hooks.snippet.json  ~/.claude/settings.json에 직접 추가할 훅 두 개
 ├── keys.snippet.json      keys.json에 직접 합칠 단축키
 ├── providers.example.json 켤 프로바이더와 키 위치          → ~/.config/herdr-nagne/providers.json (없을 때만)
@@ -31,7 +32,6 @@ herdr-nagne-custom/
 ├── package.json           npx 실행 진입점과 배포 파일 목록
 ├── scripts/
 │   ├── export.sh          이 PC → 저장소 (프로젝트 경로는 ~/Projects로 바꿔 저장)
-│   ├── add-machine.sh     Tailscale로 다른 컴퓨터 연결 (~/.ssh/config + hc machine add)
 │   └── paths.sh           export.sh가 쓰는 경로와 mod 목록
 ├── docs/                  README 스크린샷 (데모 프로젝트로 촬영)
 ├── README.md, README.ko.md
@@ -109,12 +109,14 @@ herdr의 `~/.config/herdr-app/shared.json`에 저장됩니다. 설치·내보내
 - **`providers`:** 로컬 명령만 실행합니다(각 CLI의 상태 확인·로그인·로그아웃). `providers.json`과 `openrouter.key`만 씁니다.
 - **나머지 mod:** 네트워크를 쓰지 않습니다.
 
-## 다른 컴퓨터 연결 (Tailscale)
+## 다른 컴퓨터 연결 (Tailscale, ssh 없음)
 
 ```
- 이 컴퓨터                                              집·회사 컴퓨터 (Tailscale, 같은 계정)
- scripts/add-machine.sh <이름> <호스트> <사용자>
-   ~/.ssh/config  Host <이름> → HostName <호스트>  ──ssh──►  원격 로그인 켬, 내 키가 ~/.ssh/authorized_keys에 있음
-   hc machine add <이름>                          ──ssh──►  herdr-core (없으면 설치 제안)
- herdr 창: <이름> 컴퓨터의 Space와 터미널  ◄────────────  에이전트는 그쪽에서 실행, <이름>/t7로 부름
+ 이 컴퓨터                                             집·회사 컴퓨터 (같은 Tailscale 사용자)
+                                                      herdr-link on:
+ herdr-link add <이름> <호스트>                          tailscale serve :47710 (tailnet만)
+   hc machine add --via                                   → 127.0.0.1:47711 중계 프로그램 (로그인 시 실행)
+     'node herdr-link dial <호스트>'  ──Tailscale──►      → tailscale whois: 같은 사용자? 아니면 거부
+                                                          → herdr-core connect
+ herdr 창: <이름> 컴퓨터의 Space와 터미널  ◄────────  에이전트는 그쪽에서 실행, <이름>/t7로 부름
 ```

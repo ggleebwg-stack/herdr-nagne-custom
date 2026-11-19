@@ -1,0 +1,237 @@
+#!/usr/bin/env node
+// herdr-link — link herdr on your computers over Tailscale, with no ssh server.
+//
+// Tailscale accepts the connection (`tailscale serve`, tailnet only) and hands it to a small
+// bridge that listens on 127.0.0.1 and pipes it to `herdr-core connect`. The bridge asks
+// Tailscale who is calling and only lets in devices signed in as the same Tailscale user.
+//
+//   herdr-link on                 let your other devices reach this computer: starts the bridge,
+//                                 keeps it running after a restart, and tells Tailscale to forward
+//   herdr-link add <name> <host>  add the computer <host> (its Tailscale name) to herdr as <name>
+//   herdr-link status             what is on here
+//   herdr-link off                undo `on`
+//   herdr-link serve | dial <host>   the two ends themselves (`on` and `add` use them)
+"use strict";
+const net = require("net");
+const os = require("os");
+const fs = require("fs");
+const path = require("path");
+const { execFileSync, spawn } = require("child_process");
+
+const TAILNET_PORT = 47710; // what other devices dial, on this computer's Tailscale address
+const LOCAL_PORT = 47711; // where the bridge listens, loopback only
+const WIN = process.platform === "win32";
+const die = (msg) => { console.error(`herdr-link: ${msg}`); process.exit(1); };
+const log = (...a) => console.error(new Date().toISOString(), ...a);
+
+function findExe(name, fallbacks) {
+  const exts = WIN ? [".exe", ""] : [""];
+  for (const dir of (process.env.PATH || "").split(path.delimiter))
+    for (const ext of exts) {
+      const p = path.join(dir, name + ext);
+      try { if (fs.statSync(p).isFile()) return p; } catch {}
+    }
+  const found = fallbacks.find((p) => fs.existsSync(p));
+  if (!found) throw new Error(`${name} not found`);
+  return found;
+}
+const tailscaleExe = () => findExe("tailscale", WIN
+  ? ["C:\\Program Files\\Tailscale\\tailscale.exe"]
+  : ["/usr/local/bin/tailscale", "/Applications/Tailscale.app/Contents/MacOS/Tailscale"]);
+const coreExe = () => findExe("herdr-core", WIN
+  ? [path.join(process.env.LOCALAPPDATA ?? "", "Programs", "herdr-core", "herdr-core.exe")]
+  : [path.join(os.homedir(), ".local", "bin", "herdr-core")]);
+const hcExe = () => findExe("hc", WIN
+  ? [path.join(process.env.LOCALAPPDATA ?? "", "Programs", "herdr-core", "hc.exe")]
+  : [path.join(os.homedir(), ".local", "bin", "hc")]);
+// The node on PATH (a stable link), not the versioned file it points to: the path is saved
+// in the autostart entry and in herdr's machine list, and must survive a Node upgrade.
+const nodeExe = () => {
+  try { return findExe("node", []); } catch { return process.execPath; }
+};
+const SELF = fs.realpathSync(__filename);
+const NAGNE = path.join(os.homedir(), ".config", "herdr-nagne");
+const ts = (cmd, ...args) => JSON.parse(execFileSync(tailscaleExe(), [cmd, "--json", ...args], { encoding: "utf8" }));
+
+// Tailscale puts one line in front of each forwarded connection (PROXY protocol v1):
+//   PROXY TCP4 <caller ip> <our ip> <caller port> <our port>\r\n
+function readProxyLine(sock, done) {
+  let buf = Buffer.alloc(0);
+  const onData = (chunk) => {
+    buf = Buffer.concat([buf, chunk]);
+    const end = buf.indexOf("\r\n");
+    if (end < 0) return buf.length > 200 ? done(null) : undefined;
+    sock.off("data", onData);
+    sock.pause();
+    const m = /^PROXY TCP[46] (\S+) \S+ (\d+) \d+$/.exec(buf.subarray(0, end).toString("latin1"));
+    done(m && { ip: m[1], port: m[2] }, buf.subarray(end + 2));
+  };
+  sock.on("data", onData);
+}
+
+// This computer in Tailscale: the signed-in user and the name other devices dial.
+function tailscaleSelf() {
+  const st = ts("status");
+  if (st.BackendState !== "Running") throw new Error(`Tailscale is ${st.BackendState}`);
+  return {
+    login: st.User[String(st.Self.UserID)].LoginName,
+    name: (st.Self.DNSName || "").split(".")[0] || st.Self.HostName,
+  };
+}
+
+async function serve() {
+  // At login Tailscale may not be up yet: wait for it instead of exiting.
+  let me;
+  for (;;) {
+    try { me = tailscaleSelf().login; break; } catch (e) {
+      log(`waiting for Tailscale: ${e.message.split("\n")[0]}`);
+      await new Promise((r) => setTimeout(r, 10000));
+    }
+  }
+  const core = coreExe();
+  const server = net.createServer((sock) => {
+    sock.on("error", () => {});
+    readProxyLine(sock, (caller, rest) => {
+      let who = null;
+      if (caller) try { who = ts("whois", `${caller.ip}:${caller.port}`); } catch {}
+      const login = who?.UserProfile?.LoginName;
+      const tagged = (who?.Node?.Tags ?? []).length > 0;
+      if (!who || login !== me || tagged) {
+        log(`refused ${caller ? `${caller.ip} (${who?.Node?.Name ?? "unknown"}, ${tagged ? "tagged device" : login ?? "no identity"})` : "a connection without a Tailscale caller line"}`);
+        return sock.destroy();
+      }
+      log(`connected: ${who.Node.Name}`);
+      const child = spawn(core, ["connect"], { stdio: ["pipe", "pipe", "inherit"], windowsHide: true });
+      child.stdin.on("error", () => {});
+      if (rest.length) child.stdin.write(rest);
+      sock.pipe(child.stdin);
+      child.stdout.pipe(sock);
+      sock.on("close", () => child.kill());
+      child.on("exit", () => { log(`closed: ${who.Node.Name}`); sock.destroy(); });
+      sock.resume();
+    });
+  });
+  server.on("error", (e) => die(`cannot listen on 127.0.0.1:${LOCAL_PORT}: ${e.message}`));
+  server.listen(LOCAL_PORT, "127.0.0.1", () => log(`bridge on 127.0.0.1:${LOCAL_PORT} for ${me}`));
+}
+
+// herdr appends the line it would run over ssh as the last argument; the bridge on the other
+// side only ever runs `herdr-core connect`, so it is ignored.
+function dial(host) {
+  const sock = net.connect(TAILNET_PORT, host);
+  sock.on("error", (e) => die(`${host}: ${e.message} (is herdr-link on there, and Tailscale up?)`));
+  process.stdin.pipe(sock);
+  sock.pipe(process.stdout);
+  sock.on("close", () => process.exit(0));
+}
+
+function add(name, host) {
+  const quote = (s) => (WIN ? `"${s}"` : `'${s.replace(/'/g, `'\\''`)}'`);
+  const via = [nodeExe(), SELF, "dial", host].map(quote).join(" ");
+  let self = null;
+  try { self = tailscaleSelf().name; } catch {}
+  if (self && host.toLowerCase().split(".")[0] === self.toLowerCase()) die(`${host} is this computer; give the other computer's Tailscale name`);
+  // hc prints its own result or error; pass its exit code on.
+  const r = require("child_process").spawnSync(hcExe(), ["machine", "add", "--via", via, "--name", name], { stdio: "inherit" });
+  if (r.status !== 0) process.exit(r.status ?? 1);
+  console.log(`Added. In herdr, open a new space on ${name}, or: hc run --on ${name} -- claude`);
+}
+
+// ---- on / off / status: the bridge as a login item, and Tailscale's forwarding rule ----
+const LABEL = "dev.herdr-nagne.link";
+const PLIST = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
+const STARTUP_VBS = path.join(process.env.APPDATA ?? "", "Microsoft", "Windows", "Start Menu", "Programs", "Startup", "herdr-link.vbs");
+const LOG = path.join(NAGNE, "link.log");
+const quiet = (file, args) => { try { execFileSync(file, args, { stdio: "ignore" }); return true; } catch { return false; } };
+const bridgeUp = () => new Promise((resolve) => {
+  const s = net.connect(LOCAL_PORT, "127.0.0.1");
+  s.on("connect", () => { s.destroy(); resolve(true); }).on("error", () => resolve(false));
+});
+const forwarding = () => {
+  try {
+    return execFileSync(tailscaleExe(), ["serve", "status", "--json"], { encoding: "utf8" }).includes(`127.0.0.1:${LOCAL_PORT}`);
+  } catch {
+    return false;
+  }
+};
+
+function startBridge() {
+  fs.mkdirSync(NAGNE, { recursive: true });
+  if (process.platform === "darwin") {
+    const xml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    fs.mkdirSync(path.dirname(PLIST), { recursive: true });
+    fs.writeFileSync(PLIST, `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>${LABEL}</string>
+  <key>ProgramArguments</key><array>${[nodeExe(), SELF, "serve"].map((a) => `<string>${xml(a)}</string>`).join("")}</array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardErrorPath</key><string>${xml(LOG)}</string>
+  <key>StandardOutPath</key><string>${xml(LOG)}</string>
+</dict></plist>
+`);
+    const domain = `gui/${process.getuid()}`;
+    quiet("launchctl", ["bootout", `${domain}/${LABEL}`]);
+    if (!quiet("launchctl", ["bootstrap", domain, PLIST])) die(`launchctl could not load ${PLIST}`);
+  } else if (WIN) {
+    // A script in the Startup folder starts the bridge at sign-in with no console window.
+    const run = `CreateObject("WScript.Shell").Run """${nodeExe()}"" ""${SELF}"" serve", 0, False\r\n`;
+    fs.writeFileSync(STARTUP_VBS, run);
+    spawn("wscript.exe", [STARTUP_VBS], { detached: true, stdio: "ignore" }).unref();
+  } else {
+    die("`on` sets up autostart on macOS and Windows only. On Linux run `herdr-link serve` under your own service manager, then: tailscale serve --bg --tcp " + TAILNET_PORT + " --proxy-protocol 1 tcp://127.0.0.1:" + LOCAL_PORT);
+  }
+}
+
+function stopBridge() {
+  if (process.platform === "darwin") {
+    quiet("launchctl", ["bootout", `gui/${process.getuid()}/${LABEL}`]);
+    fs.rmSync(PLIST, { force: true });
+  } else if (WIN) {
+    fs.rmSync(STARTUP_VBS, { force: true });
+    quiet("powershell.exe", ["-NoProfile", "-Command",
+      "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -like '*herdr-link* serve*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"]);
+  }
+}
+
+async function on() {
+  const self = tailscaleSelf();
+  coreExe(); // fail now, not on the first call, if herdr-core is missing
+  startBridge();
+  let up = false;
+  for (let i = 0; i < 20 && !(up = await bridgeUp()); i++) await new Promise((r) => setTimeout(r, 500));
+  if (!up) die(`the bridge did not start; see ${LOG}`);
+  if (!forwarding())
+    execFileSync(tailscaleExe(), ["serve", "--bg", "--tcp", String(TAILNET_PORT), "--proxy-protocol", "1", `tcp://127.0.0.1:${LOCAL_PORT}`], { stdio: "ignore" });
+  if (!forwarding()) die("Tailscale did not accept the forwarding rule (tailscale serve)");
+  console.log(`On. Devices signed in to Tailscale as ${self.login} can now reach herdr here; nothing else can.
+On your other computer run:
+  herdr-link add <name> ${self.name}        (pick any <name>, e.g. home or office)`);
+}
+
+function off() {
+  quiet(tailscaleExe(), ["serve", `--tcp=${TAILNET_PORT}`, "off"]);
+  stopBridge();
+  console.log("Off. Machines you added elsewhere stay listed there; remove one with: hc machine rm <name>");
+}
+
+async function status() {
+  let self = null;
+  try { self = tailscaleSelf(); } catch (e) { console.log(`Tailscale: ${e.message.split("\n")[0]}`); }
+  if (self) console.log(`Tailscale: ${self.name} (${self.login})`);
+  console.log(`bridge: ${(await bridgeUp()) ? `running on 127.0.0.1:${LOCAL_PORT}` : "not running"}`);
+  console.log(`Tailscale forwarding: ${forwarding() ? `port ${TAILNET_PORT}, tailnet only` : "off"}`);
+  console.log(`starts at login: ${fs.existsSync(process.platform === "darwin" ? PLIST : STARTUP_VBS) ? "yes" : "no"}`);
+}
+
+const [cmd, a, b] = process.argv.slice(2);
+const run = { on, off, status, serve }[cmd];
+try {
+  if (run) Promise.resolve(run()).catch((e) => die(e.message));
+  else if (cmd === "dial" && a) dial(a);
+  else if (cmd === "add" && a && b) add(a, b);
+  else die("usage: herdr-link on | add <name> <host> | status | off");
+} catch (e) {
+  die(e.message);
+}

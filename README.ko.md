@@ -42,7 +42,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 | **`skills` mod** | Claude Code 스킬(개인·프로젝트·플러그인)을 보여주고, `/스킬 인자`를 **대기 중인 에이전트에게만** 보냅니다. |
 | **`agent-folders` mod** | Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. [kiote의 mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders)에서 Windows 작업표시줄 점 표시만 뺐습니다. |
 | **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다([지켜지는 방식](#읽기-전용은-어떻게-지켜지나)). `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
-| **`scripts/add-machine.sh`** | **Tailscale**로 연결되는 집·회사 컴퓨터를 herdr-core에 추가합니다. 이 창에서 그 컴퓨터의 에이전트를 띄우고 볼 수 있습니다. |
+| **`herdr-link`** | **Tailscale**로 컴퓨터끼리 ssh 서버 없이 연결합니다. 한쪽에서 `herdr-link on`, 다른 쪽에서 `herdr-link add`를 하면 이 창에서 상대 컴퓨터의 에이전트를 띄우고 볼 수 있습니다. 내 Tailscale 사용자로 로그인한 기기만 들어올 수 있습니다. |
 
 ## 설치
 
@@ -87,7 +87,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.3.2`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.0`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
@@ -96,7 +96,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 | `mods/*` (mod 7개) | `~/.config/herdr-app/mods/` |
 | `layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
 | `templates/*.md` | Windows `%APPDATA%\herdr-core\templates\`, 그 밖 `~/.config/herdr-core/templates/` |
-| `hw`, `nagne-session-hook` | `~/.local/bin/` (이 폴더가 PATH에 있어야 함) |
+| `hw`, `nagne-session-hook`, `herdr-link` | `~/.local/bin/` (이 폴더가 PATH에 있어야 함) |
 | `providers.example.json` | `~/.config/herdr-nagne/providers.json` (없을 때만) |
 
 herdr의 `settings.json`과 이미 있는 `providers.json`은 건드리지 않습니다. `keys.json`과 `~/.claude/settings.json`은 `--keys`, `--claude-hooks`를 줄 때만 고칩니다.
@@ -224,19 +224,24 @@ herdr 창을 닫아도 아무것도 멈추지 않습니다. herdr-core가 모든
 
 ## Tailscale로 다른 컴퓨터 연결
 
-herdr-core는 ssh로 다른 컴퓨터에서 에이전트를 실행하고 이 창에 보여줄 수 있습니다. 두 컴퓨터에 [Tailscale](https://tailscale.com)을 켜 두면 포트를 열지 않고도 집과 회사가 서로 연결됩니다.
+컴퓨터들에 [Tailscale](https://tailscale.com)을 같은 계정으로 켜 두면, 한쪽 herdr에서 다른 컴퓨터의 에이전트를 실행하고 볼 수 있습니다. kit와 함께 설치되는 `herdr-link`가 **ssh 서버 없이** 연결합니다. macOS 원격 로그인도, Windows OpenSSH Server도, 키나 비밀번호도 필요 없습니다.
 
-1. **연결할 컴퓨터에서**:
-   - Tailscale을 설치하고 같은 계정으로 로그인합니다.
-   - ssh를 켭니다. macOS는 시스템 설정 › 일반 › 공유 › **원격 로그인**을 켜고, 내 사용자만 허용합니다. Linux는 ssh 서버를 실행합니다.
-2. **이 컴퓨터에서**: 이 저장소를 받은 폴더(`git clone https://github.com/ggleebwg-stack/herdr-nagne-custom`)에서 Git Bash나 macOS 터미널로 `scripts/add-machine.sh home-mac <tailscale 이름> <사용자>`를 실행합니다. tailscale 이름은 `tailscale status`에 나오는 이름이나 `100.x` 주소입니다. 스크립트가 하는 일:
-   - ssh 키가 있는지 확인합니다.
-   - `~/.ssh/config`에 접속 항목을 추가합니다. 기존 파일은 `~/.ssh/config.bak-<시각>`으로 복사해 둡니다.
-   - 로그인을 시험합니다. 실패하면, 이 컴퓨터의 공개키를 상대 컴퓨터의 `~/.ssh/authorized_keys`에 넣는 명령을 그대로 출력합니다.
-   - `hc machine add`를 실행합니다. 상대 컴퓨터에 herdr-core가 없으면 설치할지 묻습니다.
-3. **사용**: herdr에서 그 컴퓨터로 새 Space를 열거나, 아무 터미널에서 `hc run --on home-mac -- claude`를 실행합니다. 그 컴퓨터의 터미널은 `home-mac/t7`처럼 부르고, `hc read home-mac/t7`도 로컬처럼 동작합니다.
+1. **연결받을 컴퓨터마다**: `herdr-link on`을 실행합니다(Windows는 Git Bash). 2단계에 쓸 명령을 출력합니다.
+2. **조종하는 쪽 컴퓨터에서**: `herdr-link add <이름> <tailscale 이름>`을 실행합니다. 예: `herdr-link add office bob-office-pc`. 서로 조종하려면 양쪽에서 각각 실행합니다.
+3. **사용**: herdr에서 그 컴퓨터로 새 Space를 열면 그 컴퓨터의 터미널을 로컬처럼 클릭해 다룰 수 있습니다. `hc run --on office -- claude`도 됩니다. 그 컴퓨터의 터미널은 `office/t7`처럼 부르고, `hc read office/t7`도 로컬처럼 동작합니다.
 
-`hc machine ls`로 추가한 컴퓨터를 보고, `hc machine rm <이름>`으로 목록에서 뺍니다. 빼더라도 그 컴퓨터의 터미널은 계속 돕니다.
+`herdr-link status`는 이 컴퓨터의 상태를 보여 주고, `herdr-link off`는 `on`을 되돌립니다. `hc machine ls`로 추가한 컴퓨터를 보고 `hc machine rm <이름>`으로 뺍니다.
+
+**동작 방식과 접속할 수 있는 기기**
+
+- `on`은 `127.0.0.1:47711`에서만 연결을 받는 작은 중계 프로그램을 띄웁니다. 컴퓨터 안에서만 받으므로 OS 방화벽이 허용을 묻지 않습니다. 재시작 뒤에도 돌도록 등록하고(macOS는 LaunchAgent, Windows는 시작프로그램), `tailscale serve` 규칙을 추가합니다. 그러면 이 컴퓨터의 Tailscale 주소 47710번으로 오는 연결을 Tailscale이 받아 중계 프로그램에 넘깁니다. 집이나 회사 네트워크에는 아무것도 열리지 않습니다.
+- 중계 프로그램은 연결마다 Tailscale에 누가 걸었는지 묻습니다(`tailscale whois`). 이 컴퓨터와 **같은 Tailscale 사용자**로 로그인한 기기만 받고, 태그가 붙은 기기(서버), 공유받은 기기, 확인할 수 없는 연결은 거부합니다. 통과하면 그 연결에 `herdr-core connect`를 실행합니다. herdr가 ssh로 붙을 때 실행하는 것과 같습니다.
+- 따라서 내 Tailscale 계정으로 로그인한 기기는 `herdr-link`가 켜진 컴퓨터의 터미널을 조종할 수 있습니다. 그 계정에는 믿는 기기만 두고, 원하지 않는 컴퓨터에서는 `herdr-link off`를 실행하세요.
+- `add`는 그 컴퓨터를 herdr에 `--via` 명령(`node ~/.local/bin/herdr-link dial <호스트>`)으로 저장합니다. herdr-core가 ssh 없이 컴퓨터에 붙을 때 쓰라고 제공하는 방법입니다.
+
+macOS에서 시험했습니다. Windows 쪽(시작프로그램 등록, 경로)은 작성만 하고 아직 시험하지 못했습니다.
+
+**휴대폰**: herdr 휴대폰 앱은 각 컴퓨터에 ssh로만 붙습니다. 그래서 `herdr-link`로는 휴대폰을 연결할 수 없습니다. 휴대폰 앱을 쓰려면 그 컴퓨터에 Tailscale로 닿는 ssh 서버가 있어야 합니다(macOS는 원격 로그인, Linux는 sshd나 Tailscale SSH).
 
 ## Windows에서 알아둘 점
 

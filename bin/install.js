@@ -151,7 +151,7 @@ for (const l of list("layouts", (n) => n.endsWith(".json"))) {
 const rootMissing = root && !fs.existsSync(expandHome(root));
 for (const t of list("templates", (n) => n.endsWith(".md")))
   put(path.join(REPO, "templates", t), path.join(CORE_TPL, t));
-for (const b of ["hw", "nagne-session-hook"])
+for (const b of ["hw", "nagne-session-hook", "herdr-link"])
   put(path.join(REPO, b), path.join(BIN, b), { executable: true });
 
 const providers = path.join(NAGNE, "providers.json");

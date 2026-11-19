@@ -42,6 +42,7 @@ herdr-nagne-custom/
 │   └── astra-review.md        provider codex: codex --no-daemon -m <model> -s read-only
 ├── hw                         worker launcher (bash)  -> ~/.local/bin/hw
 ├── nagne-session-hook         Claude Code SessionStart/SessionEnd hook (bash)  -> ~/.local/bin/
+├── herdr-link                 link computers over Tailscale without ssh: bridge + tailscale serve  -> ~/.local/bin/
 ├── claude-hooks.snippet.json  the two hook entries to add to ~/.claude/settings.json by hand
 ├── providers.example.json     which providers are on, where keys come from  -> ~/.config/herdr-nagne/providers.json (once)
 ├── keys.snippet.json          key bindings to merge into ~/.config/herdr-app/keys.json by hand
@@ -49,7 +50,6 @@ herdr-nagne-custom/
 ├── package.json               npx entry point and the files it ships
 ├── scripts/
 │   ├── export.sh              this machine -> repo (writes the projects root back as ~/Projects)
-│   ├── add-machine.sh         another computer over Tailscale -> ~/.ssh/config + hc machine add
 │   └── paths.sh               shared paths and the list of mods, sourced by export.sh
 ├── docs/                      README screenshots (taken from a demo project)
 ├── README.md, README.ko.md    overview and install guide
@@ -134,18 +134,20 @@ Shared state lives in herdr's `~/.config/herdr-app/shared.json`. The scripts nev
  layouts/*.json    → ~/.config/herdr-app/layouts/       projects root → "~/Projects"
                      (keeps your projects root, or --projects-root)
  templates/*.md    → herdr-core templates folder        keys.json / settings.json never exported
- hw, nagne-session-hook → ~/.local/bin/
+ hw, nagne-session-hook, herdr-link → ~/.local/bin/
  providers.example.json → ~/.config/herdr-nagne/providers.json (only if missing)   providers.json never exported
  keys.snippet.json → keys.json, with --keys (else by hand)
  claude-hooks.snippet.json → ~/.claude/settings.json, with --claude-hooks
 ```
 
-## Other computers (Tailscale)
+## Other computers (Tailscale, no ssh)
 
 ```
- this computer                                         home / office computer (Tailscale, same account)
- scripts/add-machine.sh <name> <host> <user>
-   ~/.ssh/config  Host <name> → HostName <host>   ──ssh──►  Remote Login on, your key in ~/.ssh/authorized_keys
-   hc machine add <name>                          ──ssh──►  herdr-core (offered for install if missing)
- herdr window: spaces and terminals on <name>  ◄──────────  agents run there; addressed as <name>/t7
+ this computer                                        home / office computer (same Tailscale user)
+                                                      herdr-link on:
+ herdr-link add <name> <host>                           tailscale serve :47710 (tailnet only)
+   hc machine add --via                                   → bridge on 127.0.0.1:47711 (login item)
+     'node herdr-link dial <host>'  ──Tailscale──►        → tailscale whois: same user? else refuse
+                                                          → herdr-core connect
+ herdr window: spaces and terminals on <name>  ◄────  agents run there; addressed as <name>/t7
 ```
