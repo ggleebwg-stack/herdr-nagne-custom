@@ -1,9 +1,19 @@
 # herdr-nagne-custom
 
 **에이전트 하나를 돌리면서, 그 하위 에이전트들이 일하는 모습을 옆에서 본다.**
-[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex·Grok·OpenRouter 워커 감독용 화면으로 바꾸는 레이아웃 하나, mod 다섯 개, 작은 실행기입니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
+[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex·Grok·OpenRouter 워커 감독용 화면으로 바꾸는 레이아웃 하나, mod 일곱 개, 작은 실행기입니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
 
 [English README](README.md) · [프로젝트 지도](MAP.ko.md): 파일 구성, 설치 위치, 연결 구조
+
+## 빠른 설치
+
+[herdr](https://herdr.dev)와 [Node.js](https://nodejs.org)가 있으면, 아무 터미널에서:
+
+```
+npx github:ggleebwg-stack/herdr-nagne-custom
+```
+
+설치 후 herdr에서 `Ctrl+Shift+L`을 눌러 **supervisor** 레이아웃으로 바꾸면 끝입니다. 업데이트도 같은 명령입니다. 자세한 설명은 아래 [설치](#설치)에 있습니다.
 
 ![supervisor 레이아웃: 왼쪽은 워커 두 개를 띄운 셸, 오른쪽은 실시간 워커 칸, 아래는 사용량 막대](docs/supervisor.png)
 

@@ -1,9 +1,19 @@
 # herdr-nagne-custom
 
 **Run one agent, watch its sub-agents work beside it.**
-A layout, five mods and a tiny launcher for [herdr](https://github.com/herdrdev/herdr-app) that turn it into a cockpit for supervising Claude Code, Codex, Grok and OpenRouter workers, on this computer or on another one over Tailscale. Built and used daily on Windows; the macOS paths are written but less tested.
+A layout, seven mods and a tiny launcher for [herdr](https://github.com/herdrdev/herdr-app) that turn it into a cockpit for supervising Claude Code, Codex, Grok and OpenRouter workers, on this computer or on another one over Tailscale. Built and used daily on Windows; the macOS paths are written but less tested.
 
 [한국어 README](README.ko.md) · [Project map](MAP.md): every file, where it installs, how the pieces connect
+
+## Quick install
+
+You need [herdr](https://herdr.dev) and [Node.js](https://nodejs.org). In any terminal:
+
+```
+npx github:ggleebwg-stack/herdr-nagne-custom
+```
+
+Then press `Ctrl+Shift+L` in herdr until the **supervisor** layout shows. Run the same line again to update. Details and options: [Install](#install).
 
 ![The supervisor layout: a shell that launched two read-only workers on the left, the live worker column on the right, usage bars at the bottom](docs/supervisor.png)
 
