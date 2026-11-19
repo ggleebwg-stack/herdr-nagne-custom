@@ -91,7 +91,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.0` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.1` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 

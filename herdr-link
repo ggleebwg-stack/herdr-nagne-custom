@@ -172,8 +172,13 @@ function startBridge() {
 </dict></plist>
 `);
     const domain = `gui/${process.getuid()}`;
-    quiet("launchctl", ["bootout", `${domain}/${LABEL}`]);
-    if (!quiet("launchctl", ["bootstrap", domain, PLIST])) die(`launchctl could not load ${PLIST}`);
+    // Already loaded (a second `on`, or after an update): restart it in place. Unloading and
+    // loading again right away fails while launchd is still tearing the old one down.
+    if (quiet("launchctl", ["print", `${domain}/${LABEL}`])) {
+      if (!quiet("launchctl", ["kickstart", "-k", `${domain}/${LABEL}`])) die(`launchctl could not restart ${LABEL}`);
+    } else if (!quiet("launchctl", ["bootstrap", domain, PLIST])) {
+      die(`launchctl could not load ${PLIST}`);
+    }
   } else if (WIN) {
     // A script in the Startup folder starts the bridge at sign-in with no console window.
     const run = `CreateObject("WScript.Shell").Run """${nodeExe()}"" ""${SELF}"" serve", 0, False\r\n`;
@@ -186,7 +191,9 @@ function startBridge() {
 
 function stopBridge() {
   if (process.platform === "darwin") {
-    quiet("launchctl", ["bootout", `gui/${process.getuid()}/${LABEL}`]);
+    const target = `gui/${process.getuid()}/${LABEL}`;
+    quiet("launchctl", ["bootout", target]);
+    for (let i = 0; i < 50 && quiet("launchctl", ["print", target]); i++) execFileSync("sleep", ["0.1"]);
     fs.rmSync(PLIST, { force: true });
   } else if (WIN) {
     fs.rmSync(STARTUP_VBS, { force: true });

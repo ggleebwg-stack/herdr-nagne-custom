@@ -87,7 +87,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.4.0`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.1`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
