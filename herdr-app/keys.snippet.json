@@ -1,0 +1,15 @@
+{
+  "global": {
+    "ctrl-shift-j": {
+      "command": "pane.split",
+      "args": { "direction": "right", "mod": "skills" }
+    },
+    "ctrl-shift-h": {
+      "command": "tab.new",
+      "args": { "name": "History", "mod": "history" }
+    }
+  },
+  "layout:supervisor": {
+    "ctrl-shift-a": "layout.toggle:watch"
+  }
+}

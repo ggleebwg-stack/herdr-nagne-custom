@@ -1,0 +1,17 @@
+herdr-nagne-custom
+Copyright 2026 the herdr-nagne-custom contributors
+
+This product includes modified copies of files from herdr-app
+(https://github.com/herdrdev/herdr-app), licensed under the Apache License 2.0:
+- herdr-app/layouts/supervisor.json: a clone of defaults/layouts/main.json (herdr-app 0.1.16),
+  with a right-hand "watch" column (workers bar + pinned worker terminal), a projects block,
+  the agents block switched to agent-folders and the status block switched to status-plus.
+- herdr-app/mods/status-plus/main.js: a clone of the workspace-status mod (herdr-app 0.1.16),
+  with Claude/Codex usage bars, a refresh button and History/Skills buttons added, and the
+  layout reordered (usage on the left).
+
+herdr-app/mods/agent-folders comes from kiote/pi-setup (MIT) and itself modifies herdr-app
+files (Apache-2.0); its own NOTICE and license files are kept in that folder. In this copy the
+Windows taskbar badge (hc-badge) section is removed.
+
+The .svg icons are Lucide icons (ISC License, some MIT from Feather); see LICENSE-Lucide.txt.
