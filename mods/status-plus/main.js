@@ -13,6 +13,7 @@ import * as fs from "fs/promises";
 
 // The usage endpoints are rate limited; five minutes is fresh enough for a status bar.
 const REFRESH_MS = 5 * 60 * 1000;
+const REFRESH_SPIN_MS = 700;
 // Bump when fetchUsage starts returning different bars, so an update asks again
 // instead of showing a cached answer without them until the next refresh.
 const USAGE_SHAPE = 2;
@@ -197,16 +198,28 @@ export default class StatusPlus extends View {
   // and a failed call keeps showing it, marked stale in the tooltip. A click forces a call.
   // providers.json is read on every refresh.
   refresh(cx, force = false) {
-    cx.spawn(async (cx) => {
-      const raw = await readTextFile(CONFIG).catch(() => null);
-      let conf = DEFAULT_CONFIG;
-      this.confError = null;
-      if (raw) {
-        try { conf = JSON.parse(raw); } catch (e) { this.confError = `providers.json: ${e?.message ?? e}`; }
-      }
-      this.providers = Object.entries(conf).filter(([k, v]) => v?.enabled && NAMES[k]).map(([key, cfg]) => ({ key, cfg }));
-      for (const p of this.providers) this.load(cx, p.key, p.cfg, force);
+    if (force) {
+      if (this.refreshing) return;
+      this.refreshing = true;
       cx.notify();
+    }
+    cx.spawn(async (cx) => {
+      try {
+        const raw = await readTextFile(CONFIG).catch(() => null);
+        let conf = DEFAULT_CONFIG;
+        this.confError = null;
+        if (raw) {
+          try { conf = JSON.parse(raw); } catch (e) { this.confError = `providers.json: ${e?.message ?? e}`; }
+        }
+        this.providers = Object.entries(conf).filter(([k, v]) => v?.enabled && NAMES[k]).map(([key, cfg]) => ({ key, cfg }));
+        for (const p of this.providers) this.load(cx, p.key, p.cfg, force);
+        cx.notify();
+      } finally {
+        if (force) cx.timer.after(REFRESH_SPIN_MS, (cx) => {
+          this.refreshing = false;
+          cx.notify();
+        });
+      }
     });
   }
 
@@ -367,14 +380,13 @@ export default class StatusPlus extends View {
       .children(body);
   }
 
-  // Refresh both providers now; shows a spinner while a call is in flight.
   refreshButton(t) {
-    const busy = (this.pending ?? 0) > 0;
+    const busy = this.refreshing || this.pending > 0;
     return div().id("quota-refresh").p(3).rounded(4).text_color(busy ? t.accent : t.muted)
       .tooltip(busy ? "Refreshing usage…" : "Refresh usage now")
       .hover((s) => s.bg(t.hover).text_color(t.foreground))
-      .on_click((_e, cx) => { if (!busy) this.refresh(cx, true); })
-      .child(svg(busy ? "mods/workspace-chrome/spinner.svg" : "mods/status-plus/refresh.svg").size(13));
+      .on_click((_e, cx) => { if (!(this.pending > 0)) this.refresh(cx, true); })
+      .child(svg("mods/status-plus/refresh.svg").size(13).when(busy, (el) => el.spin(REFRESH_SPIN_MS)));
   }
 
   // Opens the Providers window: switch providers, sign in or out, OpenRouter key and model.
