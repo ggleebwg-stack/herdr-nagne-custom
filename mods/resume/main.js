@@ -7,7 +7,6 @@ import { v_flex, h_flex } from "gpui-base";
 import { theme, run, hc, home, readTextFile, writeTextFile, shared, setShared, props, closeOverlay } from "herdr";
 
 const WIN = /^[A-Za-z]:/.test(home());
-const SESSIONS = `${home()}/.config/herdr-nagne/sessions`;
 const SHELL = /^(powershell|pwsh|cmd|bash|zsh|fish|sh|dash|ksh|nu)(\.exe)?$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const APPS = { claude: { name: "Claude", command: (id) => `claude --resume ${id}` } };
@@ -72,7 +71,8 @@ export default class Resume extends View {
 
   dismiss(cx, c) {
     cx.spawn(async (cx) => {
-      const path = `${SESSIONS}/${c.terminal}.jsonl`;
+      const path = c.log; // status-plus's scan: sessions/<core id>/<terminal>.jsonl
+      if (!path) return;
       const old = (await readTextFile(path).catch(() => null)) ?? "";
       const sep = old && !old.endsWith("\n") ? "\n" : "";
       await writeTextFile(path, `${old}${sep}${JSON.stringify({ e: "dismiss", id: c.id, at: Date.now() })}\n`, old || null).catch(() => null);

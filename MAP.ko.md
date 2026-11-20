@@ -36,8 +36,10 @@ herdr-nagne-custom/
 ├── scripts/
 │   ├── compat-check.js    herdr 업데이트 후 점검: mod 로드, 명령과 hc 옵션이 그대로 있는지
 │   ├── export.sh          이 PC → 저장소 (프로젝트 경로는 ~/Projects로 바꿔 저장)
-│   └── paths.sh           export.sh가 쓰는 경로와 mod 목록
-├── docs/                  README 스크린샷 (데모 프로젝트로 촬영)
+│   ├── paths.sh           export.sh가 쓰는 경로와 mod 목록
+│   └── demo/              stage.js: 별도 데모 창·코어에 스크린샷 장면을 꾸밈.
+│                          demo-agent / demo-worker가 에이전트와 워커 대역
+├── docs/                  README 스크린샷 (데모 장면에서 잘라냄, 실제 세션은 쓰지 않음)
 ├── README.md, README.ko.md
 ├── MAP.md, MAP.ko.md      이 문서
 └── LICENSE, NOTICE, LICENSE-Lucide.txt
@@ -97,13 +99,13 @@ herdr의 `~/.config/herdr-app/shared.json`에 저장됩니다. 설치·내보내
 | `resume.candidates` | 이어갈 수 있는 세션 목록 (status-plus가 만들고 resume mod가 씀) |
 | `resume.sent`, `resume.told` | 방금 이어가기를 보낸 칸, 이미 알림을 띄운 세션 |
 
-세션 기록은 `~/.config/herdr-nagne/sessions/<터미널>.jsonl`에 줄 단위로 덧붙여집니다. 종료 기록이 없는 시작 기록이 "열린 세션"입니다.
+세션 기록은 `~/.config/herdr-nagne/sessions/<core id>/<터미널>.jsonl`에 줄 단위로 덧붙여집니다. 터미널 주소는 herdr-core마다 따로라서(코어가 둘이면 둘 다 `t1s`가 있음) 코어 ID별 폴더에 나눠 둡니다. 종료 기록이 없는 시작 기록이 "열린 세션"입니다.
 
 ## 재부팅 뒤 이어가기
 
 ```
  herdr 칸의 claude (환경변수 HC_TERMINAL_ID=t7)
-   SessionStart / SessionEnd ──► nagne-session-hook ──► sessions/t7.jsonl (덧붙이기만)
+   SessionStart / SessionEnd ──► nagne-session-hook ──► sessions/<core id>/t7.jsonl (덧붙이기만)
  재부팅: herdr-core가 t7 칸을 같은 주소의 빈 셸로 되살림
    status-plus: 열린 세션 + hc ls(칸 있음, 워커 아님, 에이전트 아님) + hc get(맨 앞이 셸) ──► "Resume 1 agent"
    resume mod: Resume 클릭 → 다시 확인 → hc send t7 "claude --resume <id>" (폴더가 다르면 먼저 이동)

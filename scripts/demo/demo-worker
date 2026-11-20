@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# demo-worker <line>...  Prints the lines slowly, then waits (a stand-in for a read-only worker).
+for l in "$@"; do printf '%s\n' "$l"; sleep 0.05; done
+exec sleep 100000

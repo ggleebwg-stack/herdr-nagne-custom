@@ -96,8 +96,8 @@ export default class Projects extends View {
           .child(this.showHidden ? "숨김 닫기" : `숨김 ${hiddenCount}`))))
       .child(v_flex().id("projects-list").flex_1().min_h(0).px(8).pb(10).overflow_y_scrollbar()
         .when(this.missing, (el) => el.child(v_flex().px(8).gap(4).text_size(11.5)
-          .child(div().text_color(t.blocked).child(`폴더가 없습니다: ${this.root()}`))
-          .child(div().text_color(t.dim).child("프로젝트 폴더를 정하려면 터미널에서:"))
+          .child(div().text_color(t.blocked).child(`Folder not found: ${this.root()}`))
+          .child(div().text_color(t.dim).child("Pick your projects folder from a terminal:"))
           .child(div().text_color(t.muted).child(SET_ROOT))))
         .when(!!this.error, (el) => el.child(div().px(8).text_color(t.blocked).text_size(11.5).child(this.error)))
         .children(rows.map((name) => {

@@ -54,8 +54,10 @@ herdr-nagne-custom/
 ├── scripts/
 │   ├── compat-check.js        after a herdr update: do the mods load, do the commands and hc options still exist
 │   ├── export.sh              this machine -> repo (writes the projects root back as ~/Projects)
-│   └── paths.sh               shared paths and the list of mods, sourced by export.sh
-├── docs/                      README screenshots (taken from a demo project)
+│   ├── paths.sh               shared paths and the list of mods, sourced by export.sh
+│   └── demo/                  stage.js sets up the screenshot scene in a separate demo window and core;
+│                              demo-agent / demo-worker stand in for agents and workers
+├── docs/                      README screenshots, cropped from that demo scene (never a real session)
 ├── README.md, README.ko.md    overview and install guide
 ├── MAP.md, MAP.ko.md          this file
 └── LICENSE, NOTICE, LICENSE-Lucide.txt
@@ -108,9 +110,9 @@ root (row)
 | Mod | Reads | Writes / runs | Shared state keys |
 |---|---|---|---|
 | workers | `terminals()`, `layout()` | `layout.set`, `layout.show` / `layout.hide` / `layout.toggle` (the watch column; only the status-row copy, since a hidden column's mod never starts), `terminal.peek`, `terminal.kill` | none |
-| status-plus | watches `~/.config/herdr-nagne/` (refreshes on change); `sessions/*.jsonl` + `hc ls` / `hc get` to find agents to resume; `providers.json`, `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json`, the OpenRouter key (`keyEnv` / `keyFile`) | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage`, `openrouter.ai/api/v1/key`; runs `grok usage --json` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
+| status-plus | watches `~/.config/herdr-nagne/` (refreshes on change); `sessions/<core id>/*.jsonl` (this herdr-core only) + `hc server status` / `hc ls` / `hc get` to find agents to resume; `providers.json`, `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json`, the OpenRouter key (`keyEnv` / `keyFile`) | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage`, `openrouter.ai/api/v1/key`; runs `grok usage --json` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
 | providers | `~/.config/herdr-nagne/providers.json`, `openrouter.key`; runs `claude auth status`, `codex login status`, `opencode auth list`; reads whether `~/.grok/auth.json` holds a login | writes `providers.json` (one provider per line) and `openrouter.key`; `terminal.open` a tab with the CLI's login; runs the CLI's logout; `app.settings` (Machines) | clears `status-plus.usage.<provider>` when a login changes |
-| resume | shared `resume.candidates` | `hc get` (re-check the pane), `hc send <terminal> "claude --resume <id>"`, `pane.focus`; appends a dismiss line to `sessions/<terminal>.jsonl` | `resume.sent`, `resume.candidates` |
+| resume | shared `resume.candidates` | `hc get` (re-check the pane), `hc send <terminal> "claude --resume <id>"`, `pane.focus`; appends a dismiss line to `sessions/<core id>/<terminal>.jsonl` | `resume.sent`, `resume.candidates` |
 | projects | folder names under `props.root` (PowerShell / `ls`), `spaces()`, `panes()` | `space.select`, `space.new` | `projects.hidden` |
 | skills | `~/.claude/skills`, `<repo>/.claude/skills`, `~/.claude/plugins/installed_plugins.json` | `hc send --if idle <agent> "/skill args"` | none |
 | agent-folders | `agents()`, `terminals()`, `spaces()`, `panes()`, `layout()` | `hc label <terminal> agentfolders.folder=…`, `pane.focus`, `terminal.peek`, `terminal.pin`, `layout.resize` | `agentFolders`, `sidebar.width`, `sidebar.collapsed` |
@@ -121,7 +123,7 @@ Shared state lives in herdr's `~/.config/herdr-app/shared.json`. The scripts nev
 
 ```
  claude in a herdr pane (env HC_TERMINAL_ID=t7)
-   SessionStart / SessionEnd ──► nagne-session-hook ──► ~/.config/herdr-nagne/sessions/t7.jsonl  (append only)
+   SessionStart / SessionEnd ──► nagne-session-hook ──► ~/.config/herdr-nagne/sessions/<core id>/t7.jsonl  (append only)
                                                           {"e":"start","app":"claude","id":…,"cwd":…,"at":…}
 
  reboot: herdr-core gives pane t7 a fresh shell, same address

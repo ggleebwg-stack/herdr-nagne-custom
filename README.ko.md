@@ -1,11 +1,15 @@
 # herdr-nagne-custom
 
 **에이전트 하나를 돌리면서, 그 하위 에이전트들이 일하는 모습을 옆에서 본다.**
-[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex·Grok·OpenRouter 워커 감독용 화면으로 바꾸는 레이아웃 하나, mod 일곱 개, 작은 실행기입니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
+[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex·Grok·Hermes·OpenRouter 에이전트 감독용 화면으로 바꾸는 레이아웃 하나, mod 일곱 개, 작은 실행기입니다. 이 컴퓨터뿐 아니라 Tailscale로 연결한 다른 컴퓨터의 에이전트도 다룹니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
 
-[English README](README.md) · [프로젝트 지도](MAP.ko.md): 파일 구성, 설치 위치, 연결 구조
+[English README](README.md) · [프로젝트 지도](MAP.ko.md): 파일 구성, 설치 위치, 연결 구조 · [Releases](https://github.com/ggleebwg-stack/herdr-nagne-custom/releases): 버전별 변경 내역
 
-## 빠른 설치
+![supervisor 레이아웃: 왼쪽은 워커 두 개를 띄운 에이전트, 오른쪽은 실시간 워커 칸, 왼쪽 아래는 상태별 Agents 목록, 맨 아래는 사용량 막대가 있는 상태바](docs/supervisor.png)
+
+*데모 프로젝트입니다. 화면의 에이전트와 워커는 Claude Code·Codex·Hermes와 같은 방식으로 herdr에 상태를 알리는 대역이라, 실제 세션이나 계정은 보이지 않습니다.*
+
+## 설치와 업데이트
 
 [herdr](https://herdr.dev)와 [Node.js](https://nodejs.org)가 있으면, 아무 터미널에서:
 
@@ -13,37 +17,60 @@
 npx github:ggleebwg-stack/herdr-nagne-custom
 ```
 
-설치 후 herdr에서 `Ctrl+Shift+L`(macOS는 `Cmd+Shift+L`)을 눌러 **supervisor** 레이아웃으로 바꾸면 끝입니다. 자세한 설명은 아래 [설치](#설치)에 있습니다.
+설치 후 herdr에서 `Ctrl+Shift+L`(macOS는 `Cmd+Shift+L`)을 눌러 **supervisor** 레이아웃으로 바꾸면 끝입니다.
 
-## 업데이트
+업데이트는 같은 명령을 다시 실행하면 됩니다. 최신 버전을 받아 와서 바뀐 파일만 교체하고, `Updated from 0.3.0 to 0.3.1: skills, explore.md`나 `Already up to date`처럼 결과를 알려 줍니다. 프로젝트 폴더, `providers.json`, 단축키, 훅은 유지되고, 교체된 파일은 `~/.herdr-config-backup/<시각>/`으로 옮겨 둡니다. 무엇이 바뀔지 먼저 보려면 `--dry-run`을 붙이세요. 옵션과 수동 설정은 아래 [설치](#설치)에 있습니다.
 
-같은 명령을 다시 실행합니다.
+버전별 변경 내역은 [Releases](https://github.com/ggleebwg-stack/herdr-nagne-custom/releases)에 있습니다.
 
-```
-npx github:ggleebwg-stack/herdr-nagne-custom
-```
+---
 
-최신 버전을 받아 와서 바뀐 파일만 교체하고, `Updated from 0.3.0 to 0.3.1: skills, explore.md`나 `Already up to date`처럼 결과를 알려 줍니다. 프로젝트 폴더, `providers.json`, 단축키, 훅은 유지되고, 교체된 파일은 `~/.herdr-config-backup/<시각>/`으로 옮겨 둡니다. 무엇이 바뀔지 먼저 보려면 `--dry-run`을 붙이세요. 자세한 내용은 [업데이트와 삭제](#업데이트와-삭제)에 있습니다.
+## 기능
 
-![supervisor 레이아웃: 왼쪽은 워커 두 개를 띄운 셸, 오른쪽은 실시간 워커 칸, 아래는 사용량 막대](docs/supervisor.png)
+### 워커 칸
 
-*목업이 아닌 실제 화면입니다. 왼쪽 셸에서 `hw`로 읽기 전용 Claude Haiku 워커 두 개를 띄웠습니다. 오른쪽 칸은 워커 화면을 실시간으로 보여줍니다. 왼쪽 아래 사용량 막대는 각 회사의 사용량 조회 주소에서 받은 값입니다.*
+`supervisor` 레이아웃은 herdr 기본 레이아웃 오른쪽에 **하위 에이전트**(워커) 칸을 더한 것입니다. 에이전트가 워커를 띄우면 저절로 열리고, 모두 끝나면 닫힙니다. `workers` mod가 칸 위쪽에 실행 중인 워커마다 칩을 붙입니다. 칩을 누르면 그 워커 화면이 아래에 실시간으로 보이고, 칩마다 미리보기와 종료 버튼이 있습니다. 상태바 오른쪽 끝의 **Workers N**이나 `Ctrl+Shift+A`로 칸을 열고 닫습니다. 워커는 [`hw`](#워커-감독)로 띄웁니다.
 
-## 구성
+### 한눈에 보이는 에이전트 상태
+
+<img src="docs/agent-states.png" width="268" alt="Agents 목록: 확인이 필요한 Hermes 에이전트, 끝난 Codex 에이전트, 워커 두 개를 거느리고 작업 중인 Claude 에이전트, 흐리게 표시된 휴면 Claude 에이전트">
+
+`agent-folders` mod는 Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. 상태가 한눈에 구분됩니다. **Needs you**(확인 필요), **Done**(끝났는데 아직 안 봄), **Working**(작업 중), 흐리게 표시된 휴면 에이전트로 나뉘고, 제목 옆에 개수가 나옵니다. 워커는 자기를 띄운 에이전트 아래에 보입니다.
+
+**Hermes**도 잡힙니다. [Hermes Agent](https://github.com/NousResearch/hermes-agent)는 자기 상태를 herdr에 알려주지 않아서, kit에 Hermes 플러그인 `herdr-status`를 넣었습니다. 작업 중·확인 필요(승인이나 질문)·완료를 알려 줍니다. `--hermes-status`로 설치합니다.
+
+### 상태바: 사용량, Resume, Workers
+
+![상태바: ×가 달린 Resume 칸, Claude·Codex 사용량 막대, Workers 2 토글](docs/status-bar.png)
+
+`status-plus` mod가 **프로바이더별 사용량 칸**을 더합니다. Claude·Codex는 5시간·주간 막대(Claude는 Fable처럼 주간 한도가 따로 있는 모델마다 막대 하나를 더), OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. **Resume N agents** 칸은 재부팅 뒤에 나타나고([아래](#재부팅-뒤-이어가기)), **×**를 누르면 전부 넘기고 숨깁니다.
+
+### Providers 창
+
+![Providers 창](docs/providers.png)
+
+`Ctrl+Shift+U` 또는 상태바 톱니 버튼. Claude·Codex·Grok·OpenRouter를 켜고 끄고, 각 CLI의 로그인 상태를 보고, **로그인·로그아웃**합니다(로그인은 각 회사 CLI가 herdr 탭에서 진행). OpenRouter 사용량 키와 워커 모델도 여기서 정합니다. 자세히: [프로바이더](#프로바이더).
+
+### 재부팅 뒤 이어가기
+
+![Resume agents](docs/resume.png)
+
+재부팅·로그아웃·core 비정상 종료 뒤에는 칸마다 빈 셸로 돌아옵니다. kit가 어느 칸에서 어떤 Claude Code 세션이 돌았는지 기억해 두었다가, 클릭 한 번으로 이어가게 해 줍니다. 자세히: [재부팅 뒤 이어가기](#재부팅-뒤-이어가기).
+
+### 프로젝트 목록
+
+<img src="docs/projects-missing.png" width="268" alt="Projects 목록이 폴더를 찾지 못했다고 알리고, 폴더를 정하는 명령을 보여 줌">
+
+`projects` mod는 왼쪽에 프로젝트 폴더 목록을 최근 수정 순으로 보여줍니다. 클릭하면 그 폴더에서 작업 중인 Space로 가고, 없으면 새로 엽니다. ×로 목록에서 숨길 수 있고, 디스크의 폴더는 건드리지 않습니다. 정해 둔 폴더가 없으면(새 컴퓨터 등) 그렇다고 알리고 폴더를 정하는 명령을 보여 줍니다.
+
+### 그 밖의 구성
 
 | 구성 | 하는 일 |
 |---|---|
-| **`supervisor` 레이아웃** | herdr 기본 레이아웃에 오른쪽 **워커 칸**을 더했습니다. 하위 에이전트가 생기면 저절로 열리고, 모두 끝나면 닫힙니다. `Ctrl+Shift+A`로 켜고 끕니다. |
-| **`workers` mod** | 워커 칸 위쪽에 실행 중인 워커마다 칩이 하나씩 붙습니다. 칩을 누르면 그 워커 화면이 아래에 고정됩니다. 칩마다 미리보기와 종료 버튼이 있습니다. 상태바 오른쪽 끝의 **Workers** 개수를 누르면 워커 칸을 열고 닫습니다. |
-| **`status-plus` mod** | 기본 상태바에 **프로바이더별 사용량 칸**을 더했습니다. Claude·Codex는 5시간·주간 막대(Claude는 Fable처럼 주간 한도가 따로 있는 모델마다 막대 하나를 더), OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 어떤 프로바이더를 보일지는 `providers.json`에서 정합니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. 새로고침 버튼이 있고, 다시 불러와도 받아 둔 값을 쓰며, 서버가 429(요청 과다)로 답하면 알려준 시간만큼 기다립니다. |
-| **`resume` mod + `nagne-session-hook`** | 재부팅·로그아웃·core 비정상 종료 뒤, 칸마다 돌던 Claude Code 세션을 클릭 한 번으로 이어가도록 상태바에 **Resume N agents**를 띄웁니다([재부팅 뒤 이어가기](#재부팅-뒤-이어가기) 참고). |
-| **`providers` mod** | **Providers 창**(`Ctrl+Shift+U` 또는 상태바 톱니 버튼). Claude·Codex·Grok·OpenRouter를 켜고 끄고, 각 CLI의 로그인 상태를 보고, **로그인·로그아웃**합니다(로그인은 각 회사 CLI가 herdr 탭에서 진행). OpenRouter 사용량 키와 워커 모델도 여기서 정합니다. |
-| **`projects` mod** | 왼쪽에 프로젝트 폴더 목록을 최근 수정 순으로 보여줍니다. 클릭하면 그 폴더에서 작업 중인 Space로 가고, 없으면 새로 엽니다. ×로 목록에서 숨길 수 있고, 디스크의 폴더는 건드리지 않습니다. |
-| **`skills` mod** | Claude Code 스킬(개인·프로젝트·플러그인)을 보여주고, `/스킬 인자`를 **대기 중인 에이전트에게만** 보냅니다. |
-| **`agent-folders` mod** | Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. [kiote의 mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders)에서 Windows 작업표시줄 점 표시를 뺐고, 상태가 한눈에 구분되게 했습니다. **Working**(작업 중), **Done**(끝났는데 아직 안 봄), 흐리게 표시된 휴면 에이전트로 나뉘고, 제목 옆에 개수가 나옵니다. |
-| **Hermes `herdr-status` 플러그인** | [Hermes Agent](https://github.com/NousResearch/hermes-agent)는 자기 상태를 herdr에 알려주지 않아서 Agents 목록에 잡히지 않았습니다. 이 Hermes 플러그인이 작업 중·확인 필요(승인이나 질문)·완료를 알려 주어, Claude Code·Codex처럼 목록에 나옵니다. `--hermes-status`로 설치합니다. |
-| **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다([지켜지는 방식](#읽기-전용은-어떻게-지켜지나)). `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
-| **`herdr-link`** | **Tailscale**로 컴퓨터끼리 ssh 서버 없이 연결합니다. 한쪽에서 `herdr-link on`, 다른 쪽에서 `herdr-link add`를 하면 이 창에서 상대 컴퓨터의 에이전트를 띄우고 볼 수 있습니다. 내 Tailscale 사용자로 로그인한 기기만 들어올 수 있습니다. |
+| **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다([지켜지는 방식](#읽기-전용은-어떻게-지켜지나)). `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
+| **`skills` mod** | Claude Code 스킬(개인·프로젝트·플러그인)을 보여주고, `/스킬 인자`를 **대기 중인 에이전트에게만** 보냅니다. `Ctrl+Shift+J`. |
+| **Codex 규칙** | **Codex가 감독**일 때도 워커를 띄울 수 있게 합니다. Codex 샌드박스는 herdr-core에 닿지 못하는데, [`codex.rules`](codex.rules)가 `hw`와 `hc ls`/`get`/`wait`/`read`만 샌드박스 밖에서 돌게 합니다. `--codex-rules`로 설치합니다. |
+| **`herdr-link`** | **Tailscale**로 컴퓨터끼리 ssh 서버 없이 연결해, 이 창에서 다른 컴퓨터의 에이전트를 띄우고 봅니다([방법](#tailscale로-다른-컴퓨터-연결)). |
 
 ## 설치
 
@@ -90,7 +117,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.4.5`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.6`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
@@ -177,8 +204,6 @@ herdr는 워커를 제한하지 않습니다. `hc run`은 평범한 터미널 �
 
 `Ctrl+Shift+U` 또는 사용량 칸 옆 톱니 버튼으로 **Providers 창**을 엽니다. 창에서 바꾼 내용은 `~/.config/herdr-nagne/providers.json`에 저장되고, 상태바는 1초 안에 따라 바뀝니다.
 
-![Providers 창](docs/providers.png)
-
 - **스위치**: 켜면 상태바에 사용량 칸이 생기고, `hw`가 그 프로바이더의 워커 템플릿을 실행합니다.
 - **Sign in / Sign out**: 각 CLI의 로그인 여부를 보여줍니다(Claude는 요금제도 표시). **Sign in**을 누르면 herdr 탭에서 각 회사 CLI의 로그인(`claude auth login`, `codex login`, `grok login`, `opencode auth login openrouter`)이 열리고, 끝나면 창이 알아서 갱신됩니다. **Sign out**은 한 번 더 눌러야 실행됩니다. 비밀번호나 토큰은 창을 거치지 않습니다.
 - **OpenRouter 사용량 키**: `~/.config/herdr-nagne/openrouter.key`에 저장되고 상태바만 씁니다. **Worker model**은 `"env": { "OPENROUTER_MODEL": "…" }`로 저장되며, 셸에 그 변수가 없을 때 `hw`가 씁니다.
@@ -210,9 +235,7 @@ herdr 창을 닫아도 아무것도 멈추지 않습니다. herdr-core가 모든
 
 이 kit는 어느 칸에서 어떤 Claude Code 세션이 돌았는지 기억해 두었다가, 이어서 실행할지 묻습니다.
 
-![Resume agents](docs/resume.png)
-
-1. **기록**: `nagne-session-hook`이 Claude Code의 SessionStart·SessionEnd 때 `~/.config/herdr-nagne/sessions/<터미널>.jsonl`에 한 줄씩 덧붙입니다. [`claude-hooks.snippet.json`](claude-hooks.snippet.json)의 두 항목을 `~/.claude/settings.json`에 한 번 추가하면 됩니다. 이미 있는 훅은 그대로 두고 옆에 덧붙입니다. herdr 터미널 안의 세션만 기록하고, 칸 안에서 `claude -p`를 따로 실행해도 그 칸의 세션 기록은 덮어쓰지 않습니다.
+1. **기록**: `nagne-session-hook`이 Claude Code의 SessionStart·SessionEnd 때 `~/.config/herdr-nagne/sessions/<core id>/<터미널>.jsonl`에 한 줄씩 덧붙입니다(herdr-core마다 폴더가 따로입니다. 코어가 둘이면 둘 다 `t1s`가 있기 때문입니다). [`claude-hooks.snippet.json`](claude-hooks.snippet.json)의 두 항목을 `~/.claude/settings.json`에 한 번 추가하면 됩니다. 이미 있는 훅은 그대로 두고 옆에 덧붙입니다. herdr 터미널 안의 세션만 기록하고, 칸 안에서 `claude -p`를 따로 실행해도 그 칸의 세션 기록은 덮어쓰지 않습니다.
 2. **찾기**: status-plus가 아래 조건을 모두 만족하는 칸을 찾습니다. 앱을 켤 때, 기록이 바뀔 때, 30초마다 확인합니다. herdr-core에 직접 묻기 때문에, 창이 아직 연결 중이어도 돌고 있는 에이전트를 끊긴 것으로 잘못 보지 않습니다.
    - 시작 기록은 있는데 종료 기록이 없다.
    - 그 칸이 아직 있다.

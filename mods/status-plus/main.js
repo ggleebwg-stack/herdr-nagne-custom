@@ -19,7 +19,7 @@ const USAGE_SHAPE = 2;
 const WIN = /^[A-Za-z]:/.test(home());
 const DIR = `${home()}/.config/herdr-nagne`;
 const CONFIG = `${DIR}/providers.json`;
-// Claude sessions noted by nagne-session-hook, one log per herdr terminal (see scanSessions).
+// Claude sessions noted by nagne-session-hook: sessions/<core id>/<terminal>.jsonl (see scanSessions).
 const SESSIONS = `${DIR}/sessions`;
 const SHELL = /^(powershell|pwsh|cmd|bash|zsh|fish|sh|dash|ksh|nu)(\.exe)?$/i;
 const SCAN_MS = 30 * 1000;
@@ -239,21 +239,25 @@ export default class StatusPlus extends View {
   // worker, and now shows a plain shell (after a reboot herdr-core gives each kept pane a shell in
   // its last folder, same address). Asked of the core itself, not the app's live lists, so a window
   // that is still connecting can't make a running agent look gone. Logs of terminals that no longer
-  // exist are emptied. The list goes to shared state; the resume mod acts on it.
+  // exist are emptied. Only this window's core's folder is read: another core on this computer has
+  // its own t1, t2… The list goes to shared state; the resume mod acts on it.
   scanSessions(cx) {
     if (this.scanning) return;
     this.scanning = true;
     cx.spawn(async (cx) => {
       try {
-        const files = (await fs.readdir(SESSIONS).catch(() => [])).filter((f) => /^t[0-9a-z]+\.jsonl$/.test(f));
+        const core = (await hcJson(["server", "status"]))?.core?.id;
+        if (!/^[0-9a-f]{8,64}$/.test(core ?? "")) return; // core not reachable: decide nothing
+        const dir = `${SESSIONS}/${core}`;
+        const files = (await fs.readdir(dir).catch(() => [])).filter((f) => /^t[0-9a-z]+\.jsonl$/.test(f));
         const ls = files.length ? await hcJson(["ls"]) : [];
-        if (!ls) return; // core not reachable: decide nothing
+        if (!ls) return;
         const live = new Map((Array.isArray(ls) ? ls : ls.terminals ?? []).map((t) => [t.address, t]));
         const sent = shared("resume.sent") ?? {};
         const found = [];
         for (const f of files) {
           const address = f.slice(0, -6);
-          const path = `${SESSIONS}/${f}`;
+          const path = `${dir}/${f}`;
           const text = await readTextFile(path).catch(() => null);
           const term = live.get(address);
           if (!term) { if (text) await writeTextFile(path, "", text).catch(() => null); continue; }
@@ -262,7 +266,7 @@ export default class StatusPlus extends View {
           const fg = (await hcJson(["get", address]))?.foreground;
           if (!SHELL.test(fg?.name ?? "")) continue;
           const space = spaces().find((x) => x.id === term.labels?.["herdr.space"]);
-          found.push({ terminal: address, app: s.app, id: s.id, cwd: s.cwd, at: s.at, where: space?.name ?? "" });
+          found.push({ terminal: address, app: s.app, id: s.id, cwd: s.cwd, at: s.at, where: space?.name ?? "", log: path });
         }
         if (JSON.stringify(found) !== JSON.stringify(shared("resume.candidates") ?? [])) setShared("resume.candidates", found);
         // One note per session, the first time it can be resumed.
@@ -288,7 +292,8 @@ export default class StatusPlus extends View {
     cx.notify();
     cx.spawn(async () => {
       for (const c of list) {
-        const path = `${SESSIONS}/${c.terminal}.jsonl`;
+        const path = c.log;
+        if (!path) continue;
         const old = (await readTextFile(path).catch(() => null)) ?? "";
         const sep = old && !old.endsWith("\n") ? "\n" : "";
         await writeTextFile(path, `${old}${sep}${JSON.stringify({ e: "dismiss", id: c.id, at: Date.now() })}\n`, old || null).catch(() => null);

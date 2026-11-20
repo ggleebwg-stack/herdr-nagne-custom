@@ -1,11 +1,15 @@
 # herdr-nagne-custom
 
 **Run one agent, watch its sub-agents work beside it.**
-A layout, seven mods and a tiny launcher for [herdr](https://github.com/herdrdev/herdr-app) that turn it into a cockpit for supervising Claude Code, Codex, Grok and OpenRouter workers, on this computer or on another one over Tailscale. Built and used daily on Windows; the macOS paths are written but less tested.
+A layout, seven mods and a tiny launcher for [herdr](https://github.com/herdrdev/herdr-app) that turn it into a cockpit for supervising Claude Code, Codex, Grok, Hermes and OpenRouter agents, on this computer or on another one over Tailscale. Built and used daily on Windows; the macOS paths are written but less tested.
 
-[한국어 README](README.ko.md) · [Project map](MAP.md): every file, where it installs, how the pieces connect
+[한국어 README](README.ko.md) · [Project map](MAP.md): every file, where it installs, how the pieces connect · [Releases](https://github.com/ggleebwg-stack/herdr-nagne-custom/releases): what changed in each version
 
-## Quick install
+![The supervisor layout: an agent that started two read-only workers on the left, the live worker column on the right, the Agents list with its states at the bottom left, the status bar with usage bars](docs/supervisor.png)
+
+*Demo projects. The agents and workers here are stand-ins that report their state to herdr the way Claude Code, Codex and Hermes do, so no real session or account shows.*
+
+## Install and update
 
 You need [herdr](https://herdr.dev) and [Node.js](https://nodejs.org). In any terminal:
 
@@ -13,41 +17,60 @@ You need [herdr](https://herdr.dev) and [Node.js](https://nodejs.org). In any te
 npx github:ggleebwg-stack/herdr-nagne-custom
 ```
 
-Then press `Ctrl+Shift+L` (`Cmd+Shift+L` on macOS) in herdr until the **supervisor** layout shows. Details and options: [Install](#install).
+Then press `Ctrl+Shift+L` (`Cmd+Shift+L` on macOS) in herdr until the **supervisor** layout shows.
 
-## Update
+To update, run the same line again. It fetches the newest version, replaces only the files that changed and prints what it did, for example `Updated from 0.3.0 to 0.3.1: skills, explore.md` or `Already up to date`. Your projects folder, `providers.json`, key bindings and hooks are kept, and each replaced file is moved to `~/.herdr-config-backup/<time>/`. Add `--dry-run` to see what would change first. Options and manual steps: [Install](#install).
 
-Run the same line again:
-
-```
-npx github:ggleebwg-stack/herdr-nagne-custom
-```
-
-It fetches the newest version, replaces only the files that changed, and prints what it did, for example `Updated from 0.3.0 to 0.3.1: skills, explore.md` or `Already up to date`. Your projects folder, `providers.json`, key bindings and hooks are kept, and each replaced file is moved to `~/.herdr-config-backup/<time>/`. To see what would change first, add `--dry-run`. More: [Update and uninstall](#update-and-uninstall).
-
-![The supervisor layout: a shell that launched two read-only workers on the left, the live worker column on the right, usage bars at the bottom](docs/supervisor.png)
-
-*Real session, not a mock-up. The shell on the left started two read-only Claude Haiku workers with `hw`. The right column follows them live. The usage bars at the bottom left come from the vendors' own usage endpoints.*
+What changed in each version is in the [Releases](https://github.com/ggleebwg-stack/herdr-nagne-custom/releases).
 
 ---
 
-## What's inside
+## Features
 
-| | Piece | What it does |
-|---|---|---|
-| 🧭 | **`supervisor` layout** | herdr's main layout plus a right-hand **worker column**. It opens by itself when a sub-agent starts and closes when the last one ends. `Ctrl+Shift+A` toggles it. |
-| 👀 | **`workers` mod** | A chip for each live sub-agent at the top of that column. Click a chip to pin that worker's terminal below it. Each chip also has peek and kill buttons. A **Workers** count at the right end of the status bar opens or closes the column. |
-| 📊 | **`status-plus` mod** | herdr's status bar plus a **usage chip per provider**. Claude and Codex show 5-hour and weekly bars (Claude adds one for each model with its own weekly limit, such as Fable), OpenRouter shows the key's credit, and Grok shows what its CLI reports. You choose the providers in `providers.json`. The bars are green below 80%, yellow from 80% and red from 90%, and show when they reset. There is a refresh button, a cache that survives reloads, and 429 back-off. |
-| ⏯️ | **`resume` mod + `nagne-session-hook`** | After a reboot, logout or core crash, a **Resume N agents** chip offers to continue the Claude Code sessions that were running in your panes, each with one click (see [Resume after a reboot](#resume-after-a-reboot)). |
-| ⚙️ | **`providers` mod** | A **Providers window** (`Ctrl+Shift+U`, or the gear in the status bar): switch Claude, Codex, Grok and OpenRouter on or off, see whether each CLI is signed in, **sign in or out** (the vendor's own login runs in a herdr tab), and set the OpenRouter usage key and worker model. |
-| 📁 | **`projects` mod** | A sidebar list of your project folders, newest first. Clicking a folder jumps to the space already working there, or opens one. Hover × hides a folder; nothing on disk is touched. |
-| 🧩 | **`skills` mod** | Lists your Claude Code skills (personal, project and plugin) and sends `/skill args` to an agent, **only if that agent is idle**. |
-| 🗂️ | **`agent-folders` mod** | The Agents list grouped into colored folders, with drag and drop and rules. This is [kiote's mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders) with the Windows taskbar dot removed, and states you can tell apart: **Working**, **Done** (finished, not looked at yet) and dimmed idle agents, with counts beside the title. |
-| 🪽 | **Hermes `herdr-status` plugin** | [Hermes Agent](https://github.com/NousResearch/hermes-agent) doesn't tell herdr what it is doing, so herdr didn't list it as an agent. This Hermes plugin reports working, waiting on you (an approval or a question) and done, so Hermes shows in the Agents list like Claude Code and Codex. Installed with `--hermes-status`. |
-| 🚀 | **`hw` + worker templates** | `hw <template> <name> "<task>"` starts a background worker from a template: `explore` (Claude Haiku), `grok-explore` (Grok), `openrouter-explore` (any OpenRouter model via opencode), `spec-check` and `astra-review` (Codex). All of them are read-only ([how that is enforced](#how-read-only-is-enforced)). A provider switched off in `providers.json` is refused. |
-| 🌐 | **`herdr-link`** | Links your computers over **Tailscale** with no ssh server: `herdr-link on` on one, `herdr-link add` on the other, and you start and watch agents there from this window. Only devices signed in as your Tailscale user get in. |
+### Worker column
 
-![Usage bars](docs/usage-bars.png)
+The `supervisor` layout is herdr's main layout plus a column on the right for **sub-agents** (workers). It opens by itself when an agent starts a worker and closes when the last one ends. The `workers` mod puts a chip for each live worker at the top of the column. Click one to watch its terminal live below, or use its peek and kill buttons. **Workers N** at the right end of the status bar, or `Ctrl+Shift+A`, opens and closes the column. Start workers with [`hw`](#supervising-workers).
+
+### Agents you can read at a glance
+
+<img src="docs/agent-states.png" width="268" alt="Agents list: a Hermes agent that needs you, a Codex agent that is done, a Claude agent working with two workers under it, an idle Claude agent dimmed">
+
+The `agent-folders` mod groups the Agents list into colored folders, with drag and drop and rules. Each state reads apart: **Needs you**, **Done** (finished, not looked at yet), **Working**, and dimmed idle agents, with counts beside the title. Workers show under the agent that started them.
+
+**Hermes** shows up too. [Hermes Agent](https://github.com/NousResearch/hermes-agent) doesn't tell herdr what it is doing, so the kit ships a Hermes plugin, `herdr-status`, that reports working, waiting on you (an approval or a question) and done. Install it with `--hermes-status`.
+
+### Status bar: usage, Resume, Workers
+
+![Status bar: a Resume chip with its x, Claude and Codex usage bars, the Workers 2 toggle](docs/status-bar.png)
+
+The `status-plus` mod adds a **usage chip per provider**. Claude and Codex show 5-hour and weekly bars (Claude adds one for each model with its own weekly limit, such as Fable), OpenRouter shows the key's credit, and Grok shows what its CLI reports. The bars are green below 80%, yellow from 80% and red from 90%, and show when they reset. The **Resume N agents** chip appears after a reboot ([below](#resume-after-a-reboot)); its **×** dismisses them all.
+
+### Providers window
+
+![Providers window](docs/providers.png)
+
+`Ctrl+Shift+U`, or the gear in the status bar: switch Claude, Codex, Grok and OpenRouter on or off, see whether each CLI is signed in, **sign in or out** (the vendor's own login runs in a herdr tab), and set the OpenRouter usage key and worker model. More: [Providers](#providers).
+
+### Resume after a reboot
+
+![Resume agents](docs/resume.png)
+
+After a reboot, logout or core crash, each pane comes back as a plain shell. The kit remembers which Claude Code session ran in which pane and offers to continue each one with a click. More: [Resume after a reboot](#resume-after-a-reboot).
+
+### Projects list
+
+<img src="docs/projects-missing.png" width="268" alt="Projects list saying its folder was not found, with the command that sets it">
+
+The `projects` mod lists your project folders in the sidebar, newest first. Clicking a folder jumps to the space already working there, or opens one. Hover × hides a folder; nothing on disk is touched. If the folder it lists doesn't exist (say, on a new computer), it says so and shows the command that sets it.
+
+### Also in the kit
+
+| Piece | What it does |
+|---|---|
+| **`hw` + worker templates** | `hw <template> <name> "<task>"` starts a background worker: `explore` (Claude Haiku), `grok-explore` (Grok), `openrouter-explore` (any OpenRouter model via opencode), `spec-check` and `astra-review` (Codex). All are read-only ([how](#how-read-only-is-enforced)). A provider switched off in `providers.json` is refused. |
+| **`skills` mod** | Lists your Claude Code skills (personal, project and plugin) and sends `/skill args` to an agent, **only if that agent is idle**. `Ctrl+Shift+J`. |
+| **Codex rules** | Lets **Codex as the supervisor** start workers: its sandbox can't reach herdr-core, and [`codex.rules`](codex.rules) lets only `hw` and `hc ls`/`get`/`wait`/`read` run outside it. Install with `--codex-rules`. |
+| **`herdr-link`** | Links your computers over **Tailscale** with no ssh server, so you start and watch agents on another computer from this window ([how](#other-computers-over-tailscale)). |
 
 ## Install
 
@@ -94,7 +117,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.5` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.6` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -196,8 +219,6 @@ The agent's own transcript is also kept by its CLI as usual (Claude Code under `
 
 Open the **Providers window** with `Ctrl+Shift+U` or the gear next to the usage chips. It edits `~/.config/herdr-nagne/providers.json`, and the status bar follows within a second.
 
-![Providers window](docs/providers.png)
-
 - **Switch**: on = a usage chip in the status bar, and `hw` starts that provider's worker templates.
 - **Sign in / Sign out**: shows whether each CLI is signed in (Claude also shows its plan). **Sign in** opens a herdr tab running the vendor's own login (`claude auth login`, `codex login`, `grok login`, `opencode auth login openrouter`), and the window notices when it's done. **Sign out** asks for a second click, then runs the CLI's logout. The window never sees a password or token.
 - **OpenRouter usage key**: saved to `~/.config/herdr-nagne/openrouter.key`, for the status bar chip only. **Worker model** is saved as `"env": { "OPENROUTER_MODEL": "…" }`, which `hw` uses when the variable isn't set in your shell.
@@ -229,9 +250,7 @@ Closing the herdr window never stops anything: herdr-core keeps every terminal a
 
 The kit remembers which Claude Code session ran in which pane, and offers to continue them.
 
-![Resume agents](docs/resume.png)
-
-1. **Record**: `nagne-session-hook` runs on Claude Code's SessionStart and SessionEnd and appends one line to `~/.config/herdr-nagne/sessions/<terminal>.jsonl`. Add it once to `~/.claude/settings.json` from [`claude-hooks.snippet.json`](claude-hooks.snippet.json), next to any hooks you already have. It only records sessions inside herdr terminals, and a nested `claude -p` can't overwrite the pane's session.
+1. **Record**: `nagne-session-hook` runs on Claude Code's SessionStart and SessionEnd and appends one line to `~/.config/herdr-nagne/sessions/<core id>/<terminal>.jsonl` (one folder per herdr-core, since two cores both have a `t1s`). Add it once to `~/.claude/settings.json` from [`claude-hooks.snippet.json`](claude-hooks.snippet.json), next to any hooks you already have. It only records sessions inside herdr terminals, and a nested `claude -p` can't overwrite the pane's session.
 2. **Find**: status-plus looks for a session that started but never ended, in a pane that still exists, isn't a worker, and now shows a plain shell. It checks on start, when a log changes, and every 30 seconds, and it asks herdr-core directly, so a window that is still connecting can't make a running agent look gone.
 3. **Offer**: a **Resume N agents** chip appears at the left of the status bar, with one notification. Clicking it opens a list showing each session's folder, space and start time, with **Show**, **Dismiss** and **Resume**. Not resuming? The chip's **×** dismisses them all and hides it.
 4. **Resume**: checks the pane again, then types `claude --resume <session>` into it. If the pane is in another folder, it changes to the session's folder first. Nothing resumes without a click, so no usage is spent behind your back.

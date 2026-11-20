@@ -13,6 +13,8 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { spawnSync } = require("child_process");
+const { ask: cmd, drift } = require("./compat");
 
 const USAGE = "usage: npx github:ggleebwg-stack/herdr-nagne-custom [--dry-run] [--projects-root <dir>] [--keys] [--claude-hooks] [--codex-rules] [--hermes-status]";
 const opt = { dry: false, root: null, keys: false, hooks: false, codexRules: false, hermes: false };
@@ -160,10 +162,34 @@ for (const t of list("templates", (n) => n.endsWith(".md")))
 for (const b of ["hw", "nagne-session-hook", "herdr-link"])
   put(path.join(REPO, b), path.join(BIN, b), { executable: true });
 
+// Session logs used to sit in sessions/<terminal>.jsonl; they now go per herdr-core
+// (sessions/<core id>/), since two cores on one computer share terminal addresses. Move the old
+// ones under this computer's core so sessions open right now can still be resumed.
+{
+  const dir = path.join(NAGNE, "sessions");
+  const flat = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /^t[0-9a-z]+\.jsonl$/.test(f)) : [];
+  if (flat.length) {
+    const r = cmd("hc", ["server", "status", "--json"]);
+    let core = null;
+    try { core = JSON.parse(r.stdout).core.id; } catch {}
+    if (/^[0-9a-f]{8,64}$/.test(core || "")) {
+      if (DRY) console.log(`would move ${flat.length} session log(s) into ${path.join(dir, core)}`);
+      else {
+        fs.mkdirSync(path.join(dir, core), { recursive: true });
+        for (const f of flat) {
+          const to = path.join(dir, core, f);
+          if (fs.existsSync(to)) fs.appendFileSync(to, fs.readFileSync(path.join(dir, f)));
+          else fs.renameSync(path.join(dir, f), to);
+          fs.rmSync(path.join(dir, f), { force: true });
+        }
+      }
+    }
+  }
+}
+
 // PowerShell and cmd can't run an extensionless script (Codex on Windows runs its commands in
 // PowerShell): a .cmd beside each, which PowerShell picks first. hw needs Git's bash, not WSL's.
 function gitBash() {
-  const { spawnSync } = require("child_process");
   const git = (spawnSync("where", ["git"], { encoding: "utf8" }).stdout || "").split(/\r?\n/)[0].trim();
   const roots = [
     process.env.CLAUDE_CODE_GIT_BASH_PATH && path.resolve(process.env.CLAUDE_CODE_GIT_BASH_PATH, "..", ".."),
@@ -200,8 +226,7 @@ let hermesNote = null;
 if (opt.hermes || hermesHad) {
   put(path.join(REPO, "hermes", "herdr-status"), hermesPlugin);
   if (opt.hermes && !DRY) {
-    const { spawnSync } = require("child_process");
-    const r = spawnSync("hermes", ["plugins", "enable", "herdr-status"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
+    const r = cmd("hermes", ["plugins", "enable", "herdr-status"], { stdio: ["ignore", "pipe", "pipe"] });
     hermesNote = r.status === 0
       ? "Hermes: herdr-status enabled; restart running Hermes sessions to load it"
       : `Hermes: could not enable herdr-status (${r.error ? "hermes not found on PATH" : (r.stderr || r.stdout).trim().split(/\r?\n/).pop()}); run  hermes plugins enable herdr-status`;
@@ -295,9 +320,8 @@ const hooksTodo = hooksMissing && !opt.hooks;
 // Let herdr itself validate what was installed.
 const checks = [];
 if (!DRY) {
-  const { spawnSync } = require("child_process");
   for (const m of list("mods", (n) => fs.statSync(path.join(REPO, "mods", n)).isDirectory())) {
-    const r = spawnSync("herdr-app", ["check", path.join(APP, "mods", m)], { encoding: "utf8", shell: process.platform === "win32" });
+    const r = cmd("herdr-app", ["check", path.join(APP, "mods", m)]);
     if (r.error) {
       checks.push("herdr-app not found on PATH: mods were copied but not checked");
       break;
@@ -307,7 +331,7 @@ if (!DRY) {
 }
 
 // herdr updates itself; say so when it is no longer the version the kit was tested with.
-const untested = require("./compat").drift().map((v) =>
+const untested = drift().map((v) =>
   `${v.program} is ${v.have} here; the kit was tested with ${v.want}. If a mod or hw misbehaves, update the kit (run this again) or open an issue.`);
 
 // Remember which version is installed, so the next run can say what it updated from.

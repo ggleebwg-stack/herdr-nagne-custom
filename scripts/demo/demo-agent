@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# demo-agent <app> <state> <kind|-> <line>...  Reports a herdr agent state (OSC 7501), prints the lines, waits.
+app=$1 state=$2 kind=$3; shift 3
+[ "$kind" = - ] && kind=
+osc() { printf '\033]7501;state=%s:app=%s%s\033\\' "$1" "$app" "${2:+:kind=$2}"; }
+# A finished turn reads as "done" only after the window saw it work.
+[ "$state" = done ] && { osc working; sleep 3; }
+osc "$state" "$kind"
+for l in "$@"; do printf '%s\n' "$l"; sleep 0.05; done
+exec sleep 100000
