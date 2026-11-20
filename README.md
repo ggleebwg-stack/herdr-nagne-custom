@@ -36,13 +36,14 @@ It fetches the newest version, replaces only the files that changed, and prints 
 | | Piece | What it does |
 |---|---|---|
 | 🧭 | **`supervisor` layout** | herdr's main layout plus a right-hand **worker column**. It opens by itself when a sub-agent starts and closes when the last one ends. `Ctrl+Shift+A` toggles it. |
-| 👀 | **`workers` mod** | A chip for each live sub-agent at the top of that column. Click a chip to pin that worker's terminal below it. Each chip also has peek and kill buttons. |
+| 👀 | **`workers` mod** | A chip for each live sub-agent at the top of that column. Click a chip to pin that worker's terminal below it. Each chip also has peek and kill buttons. A **Workers** count at the right end of the status bar opens or closes the column. |
 | 📊 | **`status-plus` mod** | herdr's status bar plus a **usage chip per provider**. Claude and Codex show 5-hour and weekly bars (Claude adds one for each model with its own weekly limit, such as Fable), OpenRouter shows the key's credit, and Grok shows what its CLI reports. You choose the providers in `providers.json`. The bars are green below 80%, yellow from 80% and red from 90%, and show when they reset. There is a refresh button, a cache that survives reloads, and 429 back-off. |
 | ⏯️ | **`resume` mod + `nagne-session-hook`** | After a reboot, logout or core crash, a **Resume N agents** chip offers to continue the Claude Code sessions that were running in your panes, each with one click (see [Resume after a reboot](#resume-after-a-reboot)). |
 | ⚙️ | **`providers` mod** | A **Providers window** (`Ctrl+Shift+U`, or the gear in the status bar): switch Claude, Codex, Grok and OpenRouter on or off, see whether each CLI is signed in, **sign in or out** (the vendor's own login runs in a herdr tab), and set the OpenRouter usage key and worker model. |
 | 📁 | **`projects` mod** | A sidebar list of your project folders, newest first. Clicking a folder jumps to the space already working there, or opens one. Hover × hides a folder; nothing on disk is touched. |
 | 🧩 | **`skills` mod** | Lists your Claude Code skills (personal, project and plugin) and sends `/skill args` to an agent, **only if that agent is idle**. |
 | 🗂️ | **`agent-folders` mod** | The Agents list grouped into colored folders, with drag and drop and rules. This is [kiote's mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders) with the Windows taskbar dot removed, and states you can tell apart: **Working**, **Done** (finished, not looked at yet) and dimmed idle agents, with counts beside the title. |
+| 🪽 | **Hermes `herdr-status` plugin** | [Hermes Agent](https://github.com/NousResearch/hermes-agent) doesn't tell herdr what it is doing, so herdr didn't list it as an agent. This Hermes plugin reports working, waiting on you (an approval or a question) and done, so Hermes shows in the Agents list like Claude Code and Codex. Installed with `--hermes-status`. |
 | 🚀 | **`hw` + worker templates** | `hw <template> <name> "<task>"` starts a background worker from a template: `explore` (Claude Haiku), `grok-explore` (Grok), `openrouter-explore` (any OpenRouter model via opencode), `spec-check` and `astra-review` (Codex). All of them are read-only ([how that is enforced](#how-read-only-is-enforced)). A provider switched off in `providers.json` is refused. |
 | 🌐 | **`herdr-link`** | Links your computers over **Tailscale** with no ssh server: `herdr-link on` on one, `herdr-link add` on the other, and you start and watch agents there from this window. Only devices signed in as your Tailscale user get in. |
 
@@ -88,10 +89,12 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 | `--projects-root <dir>` | sets the Projects list's folder in the supervisor layout. Without it, an update keeps the folder you set before; a fresh install uses `~/Projects` and warns if it doesn't exist |
 | `--keys` | adds the bindings in `keys.snippet.json` to `~/.config/herdr-app/keys.json`. A key you already bound to something else is kept and listed |
 | `--claude-hooks` | appends the resume hook to SessionStart and SessionEnd in `~/.claude/settings.json`, once; your other hooks stay |
+| `--codex-rules` | adds [`codex.rules`](codex.rules) as `~/.codex/rules/herdr-nagne.rules`, so **Codex as the supervisor** can start workers. Codex's sandbox can't reach herdr-core; the rules let only `hw` and `hc ls`/`get`/`wait`/`read` run outside it. Your other Codex rules stay |
+| `--hermes-status` | copies [`hermes/herdr-status`](hermes/herdr-status) into Hermes' plugins folder (`%LOCALAPPDATA%\hermes\plugins`, or `~/.hermes/plugins`) and runs `hermes plugins enable herdr-status`. Restart running Hermes sessions to load it |
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.3` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.4` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -274,6 +277,9 @@ Tested on macOS; the Windows side (Startup item, paths) is written but not yet t
 - npm's `codex.cmd` shim rejects arguments that contain line breaks. `hw` flattens the prompt to one line.
 - A Codex worker in the read-only sandbox can't open the `hc` pipe, so it can't `hc send` its result. Workers end with a final summary and the parent collects it with `hc wait` + `hc read`.
 - herdr removes a terminal block from the layout when its terminal ends. The `workers` mod recreates the block it pins.
+- herdr starts a mod only once its block has shown, and remembers a hidden column across restarts. A mod inside the hidden worker column would never start, so the copy in the status bar (`"toggle": true`) is the one that opens and closes the column.
+- PowerShell and cmd can't run the extensionless `hw` and `herdr-link` (Codex on Windows runs its commands in PowerShell), so the installer writes `hw.cmd` (through Git for Windows' `bash.exe`) and `herdr-link.cmd` beside them.
+- Inside Codex's Windows sandbox `hc` is denied the herdr-core pipe (`os error 5`), so a Codex supervisor starts no worker. Install with `--codex-rules`.
 - When adding a mod by hand, write `mod.json` **before** `main.js`. Otherwise herdr docks a copy into the shown layout.
 
 ## Optional: session history panel

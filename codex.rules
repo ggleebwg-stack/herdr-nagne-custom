@@ -1,0 +1,10 @@
+# herdr-nagne-custom: commands Codex may run outside its sandbox, so a Codex supervisor can start
+# and collect workers. Inside the sandbox (Windows "elevated" in particular) hc is denied the
+# herdr-core pipe, so hw starts nothing. Only what supervising needs is allowed: hw starts a
+# read-only worker template; hc ls/get/wait/read only look. hc exec/send/keys stay sandboxed.
+# Installed as ~/.codex/rules/herdr-nagne.rules by: npx github:ggleebwg-stack/herdr-nagne-custom --codex-rules
+prefix_rule(pattern=["hw"], decision="allow")
+prefix_rule(pattern=["hc", "ls"], decision="allow")
+prefix_rule(pattern=["hc", "get"], decision="allow")
+prefix_rule(pattern=["hc", "wait"], decision="allow")
+prefix_rule(pattern=["hc", "read"], decision="allow")

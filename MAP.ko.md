@@ -22,10 +22,12 @@ herdr-nagne-custom/
 │   ├── openrouter-explore.md  opencode로 OpenRouter 모델 (모델은 $OPENROUTER_MODEL)
 │   ├── spec-check.md      Codex, 읽기 전용, 명세 대조
 │   └── astra-review.md    Codex, 읽기 전용, 설계 검토
-├── hw                     워커 실행기(bash)                     → ~/.local/bin/hw
+├── hw                     워커 실행기(bash)                     → ~/.local/bin/hw (Windows는 hw.cmd도)
 ├── nagne-session-hook     Claude Code 세션 시작·종료 훅(bash)    → ~/.local/bin/
 ├── herdr-link             Tailscale로 컴퓨터 연결(ssh 없음): 중계 + tailscale serve → ~/.local/bin/
 ├── claude-hooks.snippet.json  ~/.claude/settings.json에 직접 추가할 훅 두 개
+├── hermes/herdr-status/   Hermes Agent 플러그인: 상태를 herdr에 알림(OSC 7501) → <hermes 홈>/plugins/ (--hermes-status)
+├── codex.rules            hw와 hc ls/get/wait/read를 Codex 샌드박스 밖에서 실행 허용 → ~/.codex/rules/herdr-nagne.rules (--codex-rules)
 ├── keys.snippet.json      keys.json에 직접 합칠 단축키
 ├── providers.example.json 켤 프로바이더와 키 위치          → ~/.config/herdr-nagne/providers.json (없을 때만)
 ├── bin/install.js         npx가 실행하는 설치기: 저장소 → 이 PC (교체 파일은 ~/.herdr-config-backup/<시각>/ 으로 옮김)
@@ -59,7 +61,9 @@ root
     │   │   ├── watch-bar     workers mod
     │   │   └── watch-agent   고른 워커 터미널 (workers mod가 만들고 다시 만듦)
     │   └── panel         files / changes (herdr 기본)
-    └── status            ← kit: status-plus (herdr workspace-status 대체)
+    └── status-row
+        ├── status            ← kit: status-plus (herdr workspace-status 대체)
+        └── workers-toggle    ← kit: workers {toggle}, 항상 보여서 watch 칸을 열고 닫음
 ```
 
 ## 실행 흐름

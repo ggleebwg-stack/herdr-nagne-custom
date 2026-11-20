@@ -10,6 +10,9 @@ import { exec, spaces, panes, run, theme, props, checking, shared, setShared, ho
 const WIN = /^[A-Za-z]:/.test(home());
 const SEP = WIN ? "\\" : "/";
 const HIDDEN = "projects.hidden";
+// A missing root exits with this code, so the list can say how to set it instead of a shell error.
+const MISSING = 3;
+const SET_ROOT = "npx github:ggleebwg-stack/herdr-nagne-custom --projects-root <folder>";
 const norm = (p) => (p ?? "").replace(/\//g, "\\").replace(/\\+$/, "").toLowerCase();
 
 // Folder -> space id for local spaces. A space's `folder` is where it was made; its panes' live
@@ -27,6 +30,7 @@ export default class Projects extends View {
   init(_props, cx) {
     this.folders = [];
     this.error = null;
+    this.missing = false;
     if (checking()) return;
     // Folder list changes rarely; a minute is plenty.
     cx.timer.every(60000, (cx) => this.load(cx));
@@ -41,14 +45,17 @@ export default class Projects extends View {
   load(cx) {
     cx.spawn(async (cx) => {
       try {
-        const script = `[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-ChildItem -Directory -LiteralPath '${this.root()}' | Sort-Object LastWriteTime -Descending | ForEach-Object Name`;
+        // A single-quoted PowerShell string escapes ' as ''.
+        const root = this.root().replace(/'/g, "''");
+        const script = `[Console]::OutputEncoding=[Text.Encoding]::UTF8; if (-not (Test-Path -LiteralPath '${root}' -PathType Container)) { exit ${MISSING} }; Get-ChildItem -Directory -LiteralPath '${root}' | Sort-Object LastWriteTime -Descending | ForEach-Object Name`;
         // Newest first, folders only: PowerShell on Windows, `ls -t` elsewhere (trailing / marks folders).
         const r = WIN
           ? await exec("powershell", ["-NoProfile", "-NonInteractive", "-Command", script])
-          : await exec("sh", ["-c", "ls -1tp -- \"$1\" | sed -n 's#/$##p'", "sh", this.root()]);
+          : await exec("sh", ["-c", `[ -d "$1" ] || exit ${MISSING}; ls -1tp -- "$1" | sed -n 's#/$##p'`, "sh", this.root()]);
         // Dot folders (.worktrees: herdr's checkouts, see settings.json) are not projects.
         this.folders = r.stdout.split(/\r?\n/).map((s) => s.trim()).filter((s) => s && !s.startsWith("."));
-        this.error = r.code === 0 ? null : r.stderr.trim();
+        this.missing = r.code === MISSING;
+        this.error = r.code === 0 || this.missing ? null : r.stderr.trim().split(/\r?\n/)[0];
       } catch (e) {
         this.error = String(e);
       }
@@ -88,6 +95,10 @@ export default class Projects extends View {
           .on_click((_e, cx) => { this.showHidden = !this.showHidden; cx.notify(); })
           .child(this.showHidden ? "숨김 닫기" : `숨김 ${hiddenCount}`))))
       .child(v_flex().id("projects-list").flex_1().min_h(0).px(8).pb(10).overflow_y_scrollbar()
+        .when(this.missing, (el) => el.child(v_flex().px(8).gap(4).text_size(11.5)
+          .child(div().text_color(t.blocked).child(`폴더가 없습니다: ${this.root()}`))
+          .child(div().text_color(t.dim).child("프로젝트 폴더를 정하려면 터미널에서:"))
+          .child(div().text_color(t.muted).child(SET_ROOT))))
         .when(!!this.error, (el) => el.child(div().px(8).text_color(t.blocked).text_size(11.5).child(this.error)))
         .children(rows.map((name) => {
           const on = openFolders.has(norm(`${this.root()}${SEP}${name}`));

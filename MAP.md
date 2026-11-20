@@ -40,10 +40,12 @@ herdr-nagne-custom/
 │   ├── openrouter-explore.md  provider openrouter: opencode run --agent plan -m openrouter/${OPENROUTER_MODEL}
 │   ├── spec-check.md          provider codex: codex --no-daemon -s read-only
 │   └── astra-review.md        provider codex: codex --no-daemon -m <model> -s read-only
-├── hw                         worker launcher (bash)  -> ~/.local/bin/hw
+├── hw                         worker launcher (bash)  -> ~/.local/bin/hw (+ hw.cmd on Windows)
 ├── nagne-session-hook         Claude Code SessionStart/SessionEnd hook (bash)  -> ~/.local/bin/
 ├── herdr-link                 link computers over Tailscale without ssh: bridge + tailscale serve  -> ~/.local/bin/
 ├── claude-hooks.snippet.json  the two hook entries to add to ~/.claude/settings.json by hand
+├── hermes/herdr-status/       Hermes Agent plugin: reports its status to herdr (OSC 7501) -> <hermes home>/plugins/, with --hermes-status
+├── codex.rules                lets hw and hc ls/get/wait/read out of Codex's sandbox -> ~/.codex/rules/herdr-nagne.rules
 ├── providers.example.json     which providers are on, where keys come from  -> ~/.config/herdr-nagne/providers.json (once)
 ├── keys.snippet.json          key bindings to merge into ~/.config/herdr-app/keys.json by hand
 ├── bin/install.js             the installer run by npx: repo -> this machine (moves replaced files to ~/.herdr-config-backup/<time>/)
@@ -80,7 +82,9 @@ root (row)
     │   │   ├── watch-bar         workers            ← this kit
     │   │   └── watch-agent       {terminal: <id>}   created and re-created by the workers mod
     │   └── panel                 files / changes    (herdr)
-    └── status                    status-plus        ← this kit (replaces workspace-status)
+    └── status-row (row)
+        ├── status                status-plus        ← this kit (replaces workspace-status)
+        └── workers-toggle        workers {toggle}   ← this kit; always shown, so it opens/closes watch
 ```
 
 ## Run-time connections
@@ -103,7 +107,7 @@ root (row)
 
 | Mod | Reads | Writes / runs | Shared state keys |
 |---|---|---|---|
-| workers | `terminals()`, `layout()` | `layout.set`, `layout.show` / `layout.hide` (the watch column), `terminal.peek`, `terminal.kill` | none |
+| workers | `terminals()`, `layout()` | `layout.set`, `layout.show` / `layout.hide` / `layout.toggle` (the watch column; only the status-row copy, since a hidden column's mod never starts), `terminal.peek`, `terminal.kill` | none |
 | status-plus | watches `~/.config/herdr-nagne/` (refreshes on change); `sessions/*.jsonl` + `hc ls` / `hc get` to find agents to resume; `providers.json`, `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json`, the OpenRouter key (`keyEnv` / `keyFile`) | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage`, `openrouter.ai/api/v1/key`; runs `grok usage --json` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
 | providers | `~/.config/herdr-nagne/providers.json`, `openrouter.key`; runs `claude auth status`, `codex login status`, `opencode auth list`; reads whether `~/.grok/auth.json` holds a login | writes `providers.json` (one provider per line) and `openrouter.key`; `terminal.open` a tab with the CLI's login; runs the CLI's logout; `app.settings` (Machines) | clears `status-plus.usage.<provider>` when a login changes |
 | resume | shared `resume.candidates` | `hc get` (re-check the pane), `hc send <terminal> "claude --resume <id>"`, `pane.focus`; appends a dismiss line to `sessions/<terminal>.jsonl` | `resume.sent`, `resume.candidates` |
@@ -136,10 +140,12 @@ Shared state lives in herdr's `~/.config/herdr-app/shared.json`. The scripts nev
  layouts/*.json    → ~/.config/herdr-app/layouts/       projects root → "~/Projects"
                      (keeps your projects root, or --projects-root)
  templates/*.md    → herdr-core templates folder        keys.json / settings.json never exported
- hw, nagne-session-hook, herdr-link → ~/.local/bin/
+ hw, nagne-session-hook, herdr-link → ~/.local/bin/   (Windows: + hw.cmd, herdr-link.cmd)
  providers.example.json → ~/.config/herdr-nagne/providers.json (only if missing)   providers.json never exported
  keys.snippet.json → keys.json, with --keys (else by hand)
  claude-hooks.snippet.json → ~/.claude/settings.json, with --claude-hooks
+ codex.rules       → ~/.codex/rules/herdr-nagne.rules, with --codex-rules
+ hermes/herdr-status → <hermes home>/plugins/herdr-status, enabled, with --hermes-status
 ```
 
 ## Other computers (Tailscale, no ssh)

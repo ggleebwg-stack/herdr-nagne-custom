@@ -1,0 +1,12 @@
+name: herdr-status
+version: 1.0.0
+description: "Reports Hermes Agent's status to herdr (OSC 7501), so it shows in the Agents list like Claude Code and Codex."
+author: "herdr-nagne-custom"
+kind: standalone
+provides_hooks:
+  - pre_llm_call
+  - pre_tool_call
+  - post_tool_call
+  - pre_approval_request
+  - post_approval_response
+  - on_session_end

@@ -1,10 +1,14 @@
 // Worker bar for the supervisor layout: lists sub-agents (terminals started with `hc run` by an agent)
 // and pins the chosen one into the "watch-agent" block, so clicking your own pane never swaps it out.
 // The watch column shows itself when the first worker appears and hides when the last one ends.
+//
+// Two copies: the bar inside the watch column, and {"toggle": true} in the status row. Herdr starts
+// a mod the first time its block shows and keeps the column's shown/hidden across restarts, so the
+// bar never starts while the column is hidden. The toggle copy is always shown and does the syncing.
 
 import { View, div, svg } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { terminals, layout, run, theme, checking } from "herdr";
+import { terminals, layout, run, theme, checking, props } from "herdr";
 
 const BLOCK = "watch-agent";
 const COLUMN = "watch";
@@ -44,9 +48,10 @@ function pin(address) {
 export default class Workers extends View {
   init(_props, cx) {
     this.count = null;
-    if (checking()) return;
+    this.toggle = Boolean(props()?.toggle);
+    if (checking() || !this.toggle) return;
     // Data sync, not animation: worker start/end needs no faster reaction than this.
-    cx.timer.every(1500, () => this.sync());
+    cx.timer.every(1500, (cx) => { this.sync(); cx.notify(); });
     this.sync();
   }
 
@@ -54,15 +59,29 @@ export default class Workers extends View {
     const list = workers();
     const shown = shownAddress();
     if (list.length && !list.some((w) => w.address === shown)) pin(list[0].address);
-    if (this.count !== null && (this.count === 0) !== (list.length === 0)) {
+    // At start too: the column may have been left hidden (or shown) by the last session.
+    if (this.count === null || (this.count === 0) !== (list.length === 0)) {
       run(list.length ? "layout.show" : "layout.hide", { id: COLUMN });
     }
     this.count = list.length;
   }
 
+  // Status-row chip: the worker count; a click shows or hides the watch column.
+  renderToggle(t, list) {
+    const column = find(layout(), COLUMN);
+    const shown = Boolean(column && !column.hidden);
+    return h_flex().size_full().justify_end().items_center().pr(10).bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8)
+      .child(h_flex().id("workers-toggle").gap(6).items_center().px(6).py(1).rounded(4)
+        .text_color(list.length ? t.foreground : t.dim).tooltip(shown ? "Hide the worker column" : "Show the worker column")
+        .hover((s) => s.bg(t.hover)).on_click(() => run("layout.toggle", { id: COLUMN }))
+        .child(svg("mods/workers/terminal.svg").size(12))
+        .child(list.length ? `Workers ${list.length}` : "Workers"));
+  }
+
   render() {
     const t = theme();
     const list = workers();
+    if (this.toggle) return this.renderToggle(t, list);
     const shown = shownAddress();
     const dot = (s) => ({ working: t.working, blocked: t.blocked, error: t.blocked, done: t.done }[s] ?? t.idle);
     // A small icon button on a chip; stops the press so the chip's own click (pin) doesn't fire.

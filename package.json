@@ -1,6 +1,6 @@
 {
   "name": "herdr-nagne-custom",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "herdr customization kit: supervise agent workers, usage bars, providers, resume after reboot",
   "license": "Apache-2.0",
   "repository": {
@@ -21,6 +21,8 @@
     "providers.example.json",
     "keys.snippet.json",
     "claude-hooks.snippet.json",
+    "codex.rules",
+    "hermes/",
     "LICENSE-Lucide.txt",
     "NOTICE"
   ],

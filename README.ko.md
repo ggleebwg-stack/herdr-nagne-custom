@@ -34,13 +34,14 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 | 구성 | 하는 일 |
 |---|---|
 | **`supervisor` 레이아웃** | herdr 기본 레이아웃에 오른쪽 **워커 칸**을 더했습니다. 하위 에이전트가 생기면 저절로 열리고, 모두 끝나면 닫힙니다. `Ctrl+Shift+A`로 켜고 끕니다. |
-| **`workers` mod** | 워커 칸 위쪽에 실행 중인 워커마다 칩이 하나씩 붙습니다. 칩을 누르면 그 워커 화면이 아래에 고정됩니다. 칩마다 미리보기와 종료 버튼이 있습니다. |
+| **`workers` mod** | 워커 칸 위쪽에 실행 중인 워커마다 칩이 하나씩 붙습니다. 칩을 누르면 그 워커 화면이 아래에 고정됩니다. 칩마다 미리보기와 종료 버튼이 있습니다. 상태바 오른쪽 끝의 **Workers** 개수를 누르면 워커 칸을 열고 닫습니다. |
 | **`status-plus` mod** | 기본 상태바에 **프로바이더별 사용량 칸**을 더했습니다. Claude·Codex는 5시간·주간 막대(Claude는 Fable처럼 주간 한도가 따로 있는 모델마다 막대 하나를 더), OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 어떤 프로바이더를 보일지는 `providers.json`에서 정합니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. 새로고침 버튼이 있고, 다시 불러와도 받아 둔 값을 쓰며, 서버가 429(요청 과다)로 답하면 알려준 시간만큼 기다립니다. |
 | **`resume` mod + `nagne-session-hook`** | 재부팅·로그아웃·core 비정상 종료 뒤, 칸마다 돌던 Claude Code 세션을 클릭 한 번으로 이어가도록 상태바에 **Resume N agents**를 띄웁니다([재부팅 뒤 이어가기](#재부팅-뒤-이어가기) 참고). |
 | **`providers` mod** | **Providers 창**(`Ctrl+Shift+U` 또는 상태바 톱니 버튼). Claude·Codex·Grok·OpenRouter를 켜고 끄고, 각 CLI의 로그인 상태를 보고, **로그인·로그아웃**합니다(로그인은 각 회사 CLI가 herdr 탭에서 진행). OpenRouter 사용량 키와 워커 모델도 여기서 정합니다. |
 | **`projects` mod** | 왼쪽에 프로젝트 폴더 목록을 최근 수정 순으로 보여줍니다. 클릭하면 그 폴더에서 작업 중인 Space로 가고, 없으면 새로 엽니다. ×로 목록에서 숨길 수 있고, 디스크의 폴더는 건드리지 않습니다. |
 | **`skills` mod** | Claude Code 스킬(개인·프로젝트·플러그인)을 보여주고, `/스킬 인자`를 **대기 중인 에이전트에게만** 보냅니다. |
 | **`agent-folders` mod** | Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. [kiote의 mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders)에서 Windows 작업표시줄 점 표시를 뺐고, 상태가 한눈에 구분되게 했습니다. **Working**(작업 중), **Done**(끝났는데 아직 안 봄), 흐리게 표시된 휴면 에이전트로 나뉘고, 제목 옆에 개수가 나옵니다. |
+| **Hermes `herdr-status` 플러그인** | [Hermes Agent](https://github.com/NousResearch/hermes-agent)는 자기 상태를 herdr에 알려주지 않아서 Agents 목록에 잡히지 않았습니다. 이 Hermes 플러그인이 작업 중·확인 필요(승인이나 질문)·완료를 알려 주어, Claude Code·Codex처럼 목록에 나옵니다. `--hermes-status`로 설치합니다. |
 | **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다([지켜지는 방식](#읽기-전용은-어떻게-지켜지나)). `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
 | **`herdr-link`** | **Tailscale**로 컴퓨터끼리 ssh 서버 없이 연결합니다. 한쪽에서 `herdr-link on`, 다른 쪽에서 `herdr-link add`를 하면 이 창에서 상대 컴퓨터의 에이전트를 띄우고 볼 수 있습니다. 내 Tailscale 사용자로 로그인한 기기만 들어올 수 있습니다. |
 
@@ -84,10 +85,12 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 | `--projects-root <폴더>` | supervisor 레이아웃의 Projects 목록 폴더를 정합니다. 옵션이 없으면 업데이트할 때 이전에 정한 폴더를 그대로 두고, 처음 설치할 때는 `~/Projects`를 쓰되 그 폴더가 없으면 경고합니다 |
 | `--keys` | `keys.snippet.json`의 단축키를 `~/.config/herdr-app/keys.json`에 추가합니다. 이미 다른 동작에 쓰는 키는 그대로 두고 목록으로 알려 줍니다 |
 | `--claude-hooks` | `~/.claude/settings.json`의 SessionStart·SessionEnd에 이어가기 훅을 한 번만 덧붙입니다. 기존 훅은 그대로입니다 |
+| `--codex-rules` | [`codex.rules`](codex.rules)를 `~/.codex/rules/herdr-nagne.rules`로 넣어 **Codex가 감독할 때도** 워커를 띄울 수 있게 합니다. Codex 샌드박스는 herdr-core에 접근하지 못하므로, `hw`와 `hc ls`·`get`·`wait`·`read`만 샌드박스 밖에서 실행하게 허용합니다. 기존 Codex 규칙은 그대로입니다 |
+| `--hermes-status` | [`hermes/herdr-status`](hermes/herdr-status)를 Hermes 플러그인 폴더(`%LOCALAPPDATA%\hermes\plugins` 또는 `~/.hermes/plugins`)에 넣고 `hermes plugins enable herdr-status`를 실행합니다. 실행 중인 Hermes는 다시 시작해야 적용됩니다 |
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.4.3`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.4`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
@@ -250,6 +253,9 @@ macOS에서 시험했습니다. Windows 쪽(시작프로그램 등록, 경로)�
 - 템플릿 위치는 `~/.config`가 아니라 `%APPDATA%\herdr-core\templates`입니다.
 - npm으로 설치한 `codex.cmd`는 줄바꿈이 들어간 인자를 거부합니다. 그래서 `hw`가 프롬프트를 한 줄로 바꿉니다.
 - Codex 읽기 전용 샌드박스에서는 `hc` 파이프를 열 수 없습니다. 그래서 워커는 마지막에 요약을 남기고, 부모가 `hc wait`와 `hc read`로 가져갑니다.
+- PowerShell과 cmd는 확장자 없는 `hw`·`herdr-link`를 실행하지 못합니다(Windows의 Codex는 명령을 PowerShell로 실행). 그래서 설치기가 옆에 `hw.cmd`(Git for Windows의 `bash.exe`로 실행)와 `herdr-link.cmd`를 만듭니다.
+- Codex의 Windows 샌드박스 안에서는 `hc`가 herdr-core 파이프에 접근하지 못해(`os error 5`) Codex가 워커를 띄우지 못합니다. `--codex-rules`로 설치하세요.
+- herdr는 블록이 한 번 화면에 나와야 그 안의 mod를 시작하고, 숨긴 칸은 재시작 후에도 숨긴 채로 둡니다. 그래서 숨겨진 워커 칸 안의 mod는 시작되지 않습니다. 워커 칸을 열고 닫는 일은 상태바에 있는 사본(`"toggle": true`)이 맡습니다.
 
 ## 선택: 세션 히스토리
 

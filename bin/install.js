@@ -4,6 +4,8 @@
 // Anything it replaces is moved first to ~/.herdr-config-backup/<time>/ (nothing is deleted).
 // providers.json and herdr's settings.json are yours: it never edits them. keys.json and
 // ~/.claude/settings.json are edited only with --keys / --claude-hooks, after a backup copy.
+// --codex-rules adds the kit's own ~/.codex/rules/herdr-nagne.rules (Codex's other rules are untouched).
+// --hermes-status adds the herdr-status plugin to Hermes Agent and enables it (`hermes plugins enable`).
 // Run it again to update: files that are already the same are left alone, the projects root of
 // the supervisor layout is kept, and ~/.config/herdr-nagne/installed.json records the version.
 "use strict";
@@ -11,13 +13,15 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const USAGE = "usage: npx github:ggleebwg-stack/herdr-nagne-custom [--dry-run] [--projects-root <dir>] [--keys] [--claude-hooks]";
-const opt = { dry: false, root: null, keys: false, hooks: false };
+const USAGE = "usage: npx github:ggleebwg-stack/herdr-nagne-custom [--dry-run] [--projects-root <dir>] [--keys] [--claude-hooks] [--codex-rules] [--hermes-status]";
+const opt = { dry: false, root: null, keys: false, hooks: false, codexRules: false, hermes: false };
 for (let i = 2; i < process.argv.length; i++) {
   const a = process.argv[i];
   if (a === "--dry-run") opt.dry = true;
   else if (a === "--keys") opt.keys = true;
   else if (a === "--claude-hooks") opt.hooks = true;
+  else if (a === "--codex-rules") opt.codexRules = true;
+  else if (a === "--hermes-status") opt.hermes = true;
   else if (a === "--projects-root" && process.argv[i + 1]) opt.root = process.argv[++i];
   else if (a.startsWith("--projects-root=")) opt.root = a.slice("--projects-root=".length);
   else {
@@ -65,8 +69,9 @@ function moveAside(dst) {
   }
 }
 
-// herdr writes these into every mod folder; they are not part of the kit.
-const HERDR_OWNED = (name) => name.endsWith(".d.ts") || name === "jsconfig.json";
+// herdr writes these into every mod folder, Python its bytecode into the Hermes plugin; they are
+// not part of the kit.
+const HERDR_OWNED = (name) => name.endsWith(".d.ts") || name === "jsconfig.json" || name.endsWith(".pyc");
 const filesUnder = (dir, rel = "") =>
   fs.readdirSync(path.join(dir, rel), { withFileTypes: true }).flatMap((e) =>
     e.isDirectory() ? filesUnder(dir, path.join(rel, e.name)) : [path.join(rel, e.name)]);
@@ -78,7 +83,7 @@ function upToDate(src, dst, text) {
   if (text !== undefined) return fs.statSync(dst).isFile() && fs.readFileSync(dst, "utf8") === text;
   if (!fs.statSync(src).isDirectory()) return sameFile(src, dst);
   if (!fs.statSync(dst).isDirectory()) return false;
-  const want = filesUnder(src);
+  const want = filesUnder(src).filter((f) => !HERDR_OWNED(path.basename(f)));
   const have = filesUnder(dst).filter((f) => !HERDR_OWNED(path.basename(f)));
   return want.length === have.length && want.every((f) => sameFile(path.join(src, f), path.join(dst, f)));
 }
@@ -153,6 +158,54 @@ for (const t of list("templates", (n) => n.endsWith(".md")))
   put(path.join(REPO, "templates", t), path.join(CORE_TPL, t));
 for (const b of ["hw", "nagne-session-hook", "herdr-link"])
   put(path.join(REPO, b), path.join(BIN, b), { executable: true });
+
+// PowerShell and cmd can't run an extensionless script (Codex on Windows runs its commands in
+// PowerShell): a .cmd beside each, which PowerShell picks first. hw needs Git's bash, not WSL's.
+function gitBash() {
+  const { spawnSync } = require("child_process");
+  const git = (spawnSync("where", ["git"], { encoding: "utf8" }).stdout || "").split(/\r?\n/)[0].trim();
+  const roots = [
+    process.env.CLAUDE_CODE_GIT_BASH_PATH && path.resolve(process.env.CLAUDE_CODE_GIT_BASH_PATH, "..", ".."),
+    git && path.resolve(path.dirname(git), ".."), // Git\cmd\git.exe
+    git && path.resolve(path.dirname(git), "..", ".."), // Git\mingw64\bin\git.exe
+    path.join(process.env.ProgramFiles || "C:\\Program Files", "Git"),
+  ];
+  return roots.filter(Boolean).map((r) => path.join(r, "bin", "bash.exe")).find((f) => fs.existsSync(f)) || null;
+}
+let noGitBash = false;
+if (process.platform === "win32") {
+  const bash = gitBash();
+  if (bash) put(null, path.join(BIN, "hw.cmd"), { text: `@echo off\r\n"${bash}" "%~dp0hw" %*\r\n` });
+  else noGitBash = true;
+  put(null, path.join(BIN, "herdr-link.cmd"), { text: `@echo off\r\nnode "%~dp0herdr-link" %*\r\n` });
+}
+
+// Codex runs commands in a sandbox that is denied the herdr-core pipe, so a Codex supervisor
+// can't start workers. The kit's rules file lets hw and hc's look-only commands out.
+const CODEX = path.join(HOME, ".codex");
+const codexRules = path.join(CODEX, "rules", "herdr-nagne.rules");
+const codexTodo = fs.existsSync(CODEX) && !opt.codexRules && !fs.existsSync(codexRules);
+if (opt.codexRules || fs.existsSync(codexRules)) put(path.join(REPO, "codex.rules"), codexRules);
+
+// herdr lists a terminal as an agent only when its program reports a status (OSC 7501). Hermes
+// Agent doesn't; the herdr-status plugin reports it from Hermes' hooks. Hermes plugins are opt-in,
+// so a new install also enables it.
+const HERMES = process.env.HERMES_HOME
+  || (process.platform === "win32" ? path.join(process.env.LOCALAPPDATA || path.join(HOME, "AppData", "Local"), "hermes") : path.join(HOME, ".hermes"));
+const hermesPlugin = path.join(HERMES, "plugins", "herdr-status");
+const hermesHad = fs.existsSync(hermesPlugin);
+const hermesTodo = fs.existsSync(HERMES) && !opt.hermes && !hermesHad;
+let hermesNote = null;
+if (opt.hermes || hermesHad) {
+  put(path.join(REPO, "hermes", "herdr-status"), hermesPlugin);
+  if (opt.hermes && !DRY) {
+    const { spawnSync } = require("child_process");
+    const r = spawnSync("hermes", ["plugins", "enable", "herdr-status"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
+    hermesNote = r.status === 0
+      ? "Hermes: herdr-status enabled; restart running Hermes sessions to load it"
+      : `Hermes: could not enable herdr-status (${r.error ? "hermes not found on PATH" : (r.stderr || r.stdout).trim().split(/\r?\n/).pop()}); run  hermes plugins enable herdr-status`;
+  }
+}
 
 const providers = path.join(NAGNE, "providers.json");
 if (fs.existsSync(providers)) console.log(`kept your ${providers}`);
@@ -256,10 +309,12 @@ if (!opt.root && !keptRoot) steps.push(`Set your projects folder: run again with
 steps.push(`Switch layout: ${process.platform === "darwin" ? "Cmd+Shift+L" : "Ctrl+Shift+L"}, or  herdr-app do layout.switch '{"name":"supervisor"}'`);
 steps.push("Choose providers and sign in: Ctrl+Shift+U (Providers window)");
 if (hooksTodo) steps.push("Resume after a reboot: run again with --claude-hooks (adds two hooks to ~/.claude/settings.json)");
+if (hermesTodo) steps.push("Hermes Agent in the Agents list: run again with --hermes-status (adds and enables Hermes' herdr-status plugin)");
+if (codexTodo) steps.push("Codex as the supervisor: run again with --codex-rules (lets hw and hc ls/get/wait/read out of Codex's sandbox)");
 
 console.log(`
 ${headline}${replaced && !DRY ? ` Replaced and edited files are backed up in ${BK}` : ""}
-${onPath ? "" : `Add ${BIN} to your PATH so hw is found.\n`}${rootMissing ? `Warning: the projects folder ${root} does not exist; the Projects list will be empty. Use --projects-root <dir>.\n` : ""}${keyNotes.length ? `Key bindings left as they were:\n${keyNotes.join("\n")}\n` : ""}${checks.length ? `${checks.join("\n")}\n` : ""}${untested.length ? `${untested.join("\n")}\n` : ""}Next:
+${onPath ? "" : `Add ${BIN} to your PATH so hw is found.\n`}${hermesNote ? `${hermesNote}\n` : ""}${noGitBash ?"Git for Windows (bin\\bash.exe) not found: hw runs from Git Bash only, not from PowerShell or Codex.\n" : ""}${rootMissing ? `Warning: the projects folder ${root} does not exist; the Projects list will be empty. Use --projects-root <dir>.\n` : ""}${keyNotes.length ? `Key bindings left as they were:\n${keyNotes.join("\n")}\n` : ""}${checks.length ? `${checks.join("\n")}\n` : ""}${untested.length ? `${untested.join("\n")}\n` : ""}Next:
 ${steps.map((t, i) => `  ${i + 1}. ${t}`).join("\n")}
 More: https://github.com/ggleebwg-stack/herdr-nagne-custom`);
 if (checks.some((c) => c.startsWith("mod "))) process.exitCode = 1;
