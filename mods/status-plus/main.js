@@ -24,6 +24,9 @@ const SESSIONS = `${DIR}/sessions`;
 const SHELL = /^(powershell|pwsh|cmd|bash|zsh|fish|sh|dash|ksh|nu)(\.exe)?$/i;
 const SCAN_MS = 30 * 1000;
 const NAMES = { claude: "Claude", codex: "Codex", grok: "Grok", openrouter: "OpenRouter" };
+// Each provider's bar in its brand color; "fg" and "muted" follow the theme, so the black brands
+// stay visible in a dark theme. providers.json can set its own: "color": "#rrggbb".
+const BRAND = { claude: "#d97757", codex: "fg", grok: "muted", openrouter: "#6467f2" };
 // Without a providers.json the bar shows what it always showed.
 const DEFAULT_CONFIG = { claude: { enabled: true }, codex: { enabled: true } };
 
@@ -325,11 +328,15 @@ export default class StatusPlus extends View {
   }
 
   // One provider, drawn like Orca's usage bars: "Claude 5h ▬── 11% 2h 13m  wk ▬▬─ 47% 3d 04h".
-  // The bar fills with the share used: green, yellow from 80%, red from 90%.
-  quota(t, key, name) {
+  // The bar fills with the share used, in the provider's color, red from 90%. The number turns
+  // yellow from 80% and red from 90%.
+  quota(t, key, name, cfg) {
     const u = this.usage[key];
     const BAR = 56;
-    const fill = (used) => used >= 90 ? t.ansi1 : used >= 80 ? t.ansi3 : t.ansi2;
+    const own = /^#[0-9a-f]{6}$/i.test(cfg?.color ?? "") ? cfg.color : BRAND[key] ?? "fg";
+    const brand = own === "fg" ? t.foreground : own === "muted" ? t.muted : own;
+    const warn = (used) => used >= 90 ? t.ansi1 : t.ansi3;
+    const fill = (used) => used >= 90 ? t.ansi1 : brand;
     let body, tip;
     if (!u) {
       body = [div().text_color(t.dim).child("…")];
@@ -344,7 +351,7 @@ export default class StatusPlus extends View {
           .child(div().text_color(t.muted).child(w.label))
           .child(div().w(BAR).h(7).rounded(4).bg(t.border).overflow_hidden()
             .child(div().h(7).rounded(4).w(Math.max(used > 0 ? 3 : 0, Math.round((BAR * used) / 100))).bg(fill(used))))
-          .child(div().w(30).text_right().text_color(used >= 80 ? fill(used) : t.foreground).child(`${used}%`))
+          .child(div().w(30).text_right().text_color(used >= 80 ? warn(used) : t.foreground).child(`${used}%`))
           .when(Number.isFinite(w.resetsAt), (el) => el.child(div().w(46).text_right().text_color(t.dim).child(untilText(w.resetsAt))));
       });
       if (u.note) body.push(div().text_color(u.windows.length ? t.dim : t.muted).child(u.note));
@@ -394,7 +401,7 @@ export default class StatusPlus extends View {
     return h_flex().size_full().px(10).gap(16).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.muted)
       .child(h_flex().gap(8).items_center()
         .when((shared("resume.candidates") ?? []).length > 0, (el) => el.child(this.resumeChip(t)))
-        .children((this.providers ?? []).map((p) => this.quota(t, p.key, NAMES[p.key])))
+        .children((this.providers ?? []).map((p) => this.quota(t, p.key, NAMES[p.key], p.cfg)))
         .when(Boolean(this.confError), (el) => el.child(div().id("providers-error").text_color(t.blocked).tooltip(this.confError).child("providers.json ⚠")))
         .child(h_flex().gap(1).items_center().child(this.refreshButton(t)).child(this.settingsButton(t))))
       .child(div().flex_1())

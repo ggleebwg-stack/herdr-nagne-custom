@@ -43,7 +43,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 
 ![상태바: ×가 달린 Resume 칸, Claude·Codex 사용량 막대, Workers 2 토글](docs/status-bar.png)
 
-`status-plus` mod가 **프로바이더별 사용량 칸**을 더합니다. Claude·Codex는 5시간·주간 막대(Claude는 Fable처럼 주간 한도가 따로 있는 모델마다 막대 하나를 더), OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 80% 미만은 초록, 80% 이상은 노랑, 90% 이상은 빨강이고, 초기화까지 남은 시간도 보입니다. **Resume N agents** 칸은 재부팅 뒤에 나타나고([아래](#재부팅-뒤-이어가기)), **×**를 누르면 전부 넘기고 숨깁니다.
+`status-plus` mod가 **프로바이더별 사용량 칸**을 더합니다. Claude·Codex는 5시간·주간 막대(Claude는 Fable처럼 주간 한도가 따로 있는 모델마다 막대 하나를 더), OpenRouter는 키 잔액, Grok은 CLI가 알려주는 값을 보여줍니다. 막대는 프로바이더 대표색(Claude 주황, Codex 검정·다크 테마에서는 흰색, Grok 회색, OpenRouter 남색)이고 90% 이상이면 빨강으로 바뀝니다. 숫자는 80% 이상이면 노랑, 90% 이상이면 빨강입니다. 초기화까지 남은 시간도 보입니다. **Resume N agents** 칸은 재부팅 뒤에 나타나고([아래](#재부팅-뒤-이어가기)), **×**를 누르면 전부 넘기고 숨깁니다.
 
 ### Providers 창
 
@@ -126,7 +126,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.4.7`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.8`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
@@ -228,6 +228,8 @@ herdr는 워커를 제한하지 않습니다. `hc run`은 평범한 터미널 �
   "openrouter": { "enabled": false, "keyEnv": "OPENROUTER_API_KEY" }
 }
 ```
+
+프로바이더에 `"color": "#rrggbb"`를 넣으면 그 사용량 막대 색을 바꿀 수 있습니다.
 
 | 프로바이더 | 상태바 | 쓰는 로그인 | 워커 템플릿 |
 |---|---|---|---|

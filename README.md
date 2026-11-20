@@ -43,7 +43,7 @@ The `agent-folders` mod groups the Agents list into colored folders, with drag a
 
 ![Status bar: a Resume chip with its x, Claude and Codex usage bars, the Workers 2 toggle](docs/status-bar.png)
 
-The `status-plus` mod adds a **usage chip per provider**. Claude and Codex show 5-hour and weekly bars (Claude adds one for each model with its own weekly limit, such as Fable), OpenRouter shows the key's credit, and Grok shows what its CLI reports. The bars are green below 80%, yellow from 80% and red from 90%, and show when they reset. The **Resume N agents** chip appears after a reboot ([below](#resume-after-a-reboot)); its **×** dismisses them all.
+The `status-plus` mod adds a **usage chip per provider**. Claude and Codex show 5-hour and weekly bars (Claude adds one for each model with its own weekly limit, such as Fable), OpenRouter shows the key's credit, and Grok shows what its CLI reports. Each bar is in its provider's color (Claude orange, Codex black, or white in a dark theme, Grok gray, OpenRouter indigo) and turns red from 90%; the number turns yellow from 80% and red from 90%. Each also shows when it resets. The **Resume N agents** chip appears after a reboot ([below](#resume-after-a-reboot)); its **×** dismisses them all.
 
 ### Providers window
 
@@ -126,7 +126,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.7` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.8` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -243,6 +243,8 @@ The file keeps one provider per line, so it stays easy to edit by hand too:
   "openrouter": { "enabled": false, "keyEnv": "OPENROUTER_API_KEY" }
 }
 ```
+
+Add `"color": "#rrggbb"` to a provider to paint its usage bars in another color.
 
 | Provider | Status bar | Login it uses | Worker template |
 |---|---|---|---|
