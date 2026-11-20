@@ -1,7 +1,7 @@
 # herdr-nagne-custom
 
 **Run one agent, watch its sub-agents work beside it.**
-A layout, seven mods and a tiny launcher for [herdr](https://github.com/herdrdev/herdr-app) that turn it into a cockpit for supervising Claude Code, Codex, Grok, Hermes and OpenRouter agents, on this computer or on another one over Tailscale. Built and used daily on Windows; the macOS paths are written but less tested.
+A layout, eight mods and a tiny launcher for [herdr](https://github.com/herdrdev/herdr-app) that turn it into a cockpit for supervising Claude Code, Codex, Grok, Hermes and OpenRouter agents, on this computer or on another one over Tailscale. Built and used daily on Windows; the macOS paths are written but less tested.
 
 [한국어 README](README.ko.md) · [Project map](MAP.md): every file, where it installs, how the pieces connect · [Releases](https://github.com/ggleebwg-stack/herdr-nagne-custom/releases): what changed in each version
 
@@ -56,6 +56,14 @@ The `status-plus` mod adds a **usage chip per provider**. Claude and Codex show 
 ![Resume agents](docs/resume.png)
 
 After a reboot, logout or core crash, each pane comes back as a plain shell. The kit remembers which Claude Code session ran in which pane and offers to continue each one with a click. More: [Resume after a reboot](#resume-after-a-reboot).
+
+### Full history
+
+![Full history window: a build log of 50,001 lines with line numbers, a find box, and the per-terminal history setting at the bottom](docs/full-history.png)
+
+A terminal pane scrolls back at most 10,000 lines (a limit built into herdr-app), and only about 2,000 after the window reopens. herdr-core keeps a terminal's history on its own, and the `scrollback` mod shows all of it: press `Ctrl+Shift+Y` for the focused terminal, or pick **Full history** in an agent's right-click menu. Scroll, find, select and copy; it opens at the newest output.
+
+How much herdr-core keeps per terminal is set at the bottom of that window (**Keep per terminal … MB**), with `--history-mb <MB>` when installing, or by hand in herdr-core's own file, `history_mb = 40` in `%APPDATA%\herdr-core\config.toml` (`~/.config/herdr-core/config.toml` on macOS and Linux). The default is about 5 MB, roughly 3,000 lines; each MB is roughly 600 to 1,000 lines. It applies to terminals started after the change. The pane's own 10,000 lines can't be changed from outside herdr-app.
 
 ### Projects list
 
@@ -113,17 +121,18 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 | `--keys` | adds the bindings in `keys.snippet.json` to `~/.config/herdr-app/keys.json`. On Windows it also binds Ctrl+V to image paste in `~/.claude/keybindings.json`: Claude Code there pastes images with Alt+V, so Ctrl+V with an image copied did nothing. A key you already bound to something else is kept and listed |
 | `--claude-hooks` | appends the resume hook to SessionStart and SessionEnd in `~/.claude/settings.json`, once; your other hooks stay |
 | `--codex-rules` | adds [`codex.rules`](codex.rules) as `~/.codex/rules/herdr-nagne.rules`, so **Codex as the supervisor** can start workers. Codex's sandbox can't reach herdr-core; the rules let only `hw` and `hc ls`/`get`/`wait`/`read` run outside it. Your other Codex rules stay |
+| `--history-mb <MB>` | sets how much history herdr-core keeps per terminal (`history_mb` in its `config.toml`, 1 to 500); the [Full history](#full-history) window shows it. Without it the file is left as it is |
 | `--hermes-status` | copies [`hermes/herdr-status`](hermes/herdr-status) into Hermes' plugins folder (`%LOCALAPPDATA%\hermes\plugins`, or `~/.hermes/plugins`) and runs `hermes plugins enable herdr-status`. Restart running Hermes sessions to load it |
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.6` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.7` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
 | From | To |
 |---|---|
-| `mods/*` (7 mods) | `~/.config/herdr-app/mods/` |
+| `mods/*` (8 mods) | `~/.config/herdr-app/mods/` |
 | `layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
 | `templates/*.md` | `%APPDATA%\herdr-core\templates\` on Windows, `~/.config/herdr-core/templates/` elsewhere |
 | `hw`, `nagne-session-hook`, `herdr-link` | `~/.local/bin/`. Make sure `~/.local/bin` is on your PATH |
@@ -149,7 +158,7 @@ It never touches herdr's `settings.json` or an existing `providers.json`, and ed
 ### Update and uninstall
 
 - **Update**: run the same `npx` line again; it fetches the newest version each time. Files that did not change are left alone, and the ones it replaces go to `~/.herdr-config-backup/<time>/`. It prints what changed, for example `Updated from 0.3.0 to 0.3.1: skills, explore.md`, or `Already up to date`. Your projects folder, `providers.json`, key bindings and hooks are kept. A template or mod you edited in place is replaced like any other changed file (your copy is in the backup); to keep your own template, save it under another name.
-- **Uninstall**: switch back to the `main` layout (`Ctrl+Shift+L`), then move these out of `~/.config/herdr-app/`: `mods/workers`, `mods/projects`, `mods/status-plus`, `mods/providers`, `mods/resume`, `mods/skills`, `mods/agent-folders` and `layouts/supervisor.json`. Then remove the keys you added. If the window ever looks broken, `Ctrl+Alt+Shift+Esc` resets it to herdr's default layout.
+- **Uninstall**: switch back to the `main` layout (`Ctrl+Shift+L`), then move these out of `~/.config/herdr-app/`: `mods/workers`, `mods/projects`, `mods/status-plus`, `mods/providers`, `mods/resume`, `mods/skills`, `mods/agent-folders`, `mods/scrollback` and `layouts/supervisor.json`. Then remove the keys you added. If the window ever looks broken, `Ctrl+Alt+Shift+Esc` resets it to herdr's default layout.
 
 ### Troubleshooting
 
@@ -284,6 +293,7 @@ Tested on macOS; the Windows side (Startup item, paths) is written but not yet t
 |---|---|
 | `Ctrl+Shift+A` | Show or hide the worker column (supervisor layout) |
 | `Ctrl+Shift+U` | Open the Providers window |
+| `Ctrl+Shift+Y` | Full history of the focused terminal |
 | `Ctrl+Shift+J` | Open the Skills panel to the right |
 | `Ctrl+Shift+H` | Open the History tab (needs the optional history mod) |
 | `Ctrl+Shift+L` (`Cmd+Shift+L` on macOS) | Cycle layouts |
@@ -318,6 +328,7 @@ The History button and `Ctrl+Shift+H` open [plutotw/herdr-main-usage](https://gi
   Each credential goes only to its own vendor. For Grok it runs the local `grok usage --json`. Tokens and keys are never stored or logged. The last good answer is cached in herdr's shared state, and a 429 is respected for as long as the server asks.
 - **providers** runs only local commands: each CLI's status, login and logout (`claude auth status`, `codex login status`, `opencode auth list`) and reads whether `~/.grok/auth.json` holds a login. It sends nothing itself; what a CLI's login does is up to that CLI.
 - **nagne-session-hook** and **resume** stay on this computer: session ids, folders and times in `~/.config/herdr-nagne/sessions/`, and `hc ls` / `hc get` / `hc send`. Nothing is sent anywhere.
+- **scrollback** runs `hc read` and writes only `history_mb` in herdr-core's `config.toml`, when you press Save.
 - **projects** lists folder names: PowerShell on Windows, `ls` elsewhere. **skills** reads skill folders and runs `hc send --if idle`. **agent-folders** runs `hc label`. **workers** uses herdr commands only. None of them use the network.
 
 ## Keeping your own copy in sync

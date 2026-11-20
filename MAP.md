@@ -21,6 +21,9 @@ herdr-nagne-custom/
 │   ├── resume/                "Resume agents" list after herdr-core restarted
 │   │   ├── main.js
 │   │   └── mod.json           opens as a dialog from status-plus's Resume chip or its notification
+│   ├── scrollback/            Full history window: herdr-core's whole history of a terminal, and history_mb
+│   │   ├── main.js
+│   │   └── mod.json           opens as a window (Ctrl+Shift+Y, or Full history in an agent's right-click menu)
 │   ├── projects/              sidebar list of project folders
 │   │   ├── main.js
 │   │   ├── mod.json
@@ -56,7 +59,7 @@ herdr-nagne-custom/
 │   ├── export.sh              this machine -> repo (writes the projects root back as ~/Projects)
 │   ├── paths.sh               shared paths and the list of mods, sourced by export.sh
 │   └── demo/                  stage.js sets up the screenshot scene in a separate demo window and core;
-│                              demo-agent / demo-worker stand in for agents and workers
+│                              demo-agent / demo-worker stand in for agents and workers, demo-log for a long log
 ├── docs/                      README screenshots, cropped from that demo scene (never a real session)
 ├── README.md, README.ko.md    overview and install guide
 ├── MAP.md, MAP.ko.md          this file
@@ -113,6 +116,7 @@ root (row)
 | status-plus | watches `~/.config/herdr-nagne/` (refreshes on change); `sessions/<core id>/*.jsonl` (this herdr-core only) + `hc server status` / `hc ls` / `hc get` to find agents to resume; `providers.json`, `~/.claude/.credentials.json` (macOS: keychain), `~/.codex/auth.json`, the OpenRouter key (`keyEnv` / `keyFile`) | HTTPS GET to `api.anthropic.com/api/oauth/usage`, `chatgpt.com/backend-api/wham/usage`, `openrouter.ai/api/v1/key`; runs `grok usage --json` | `status-plus.usage.<provider>` (last good answer), `status-plus.blocked.<provider>` (429 wait) |
 | providers | `~/.config/herdr-nagne/providers.json`, `openrouter.key`; runs `claude auth status`, `codex login status`, `opencode auth list`; reads whether `~/.grok/auth.json` holds a login | writes `providers.json` (one provider per line) and `openrouter.key`; `terminal.open` a tab with the CLI's login; runs the CLI's logout; `app.settings` (Machines) | clears `status-plus.usage.<provider>` when a login changes |
 | resume | shared `resume.candidates` | `hc get` (re-check the pane), `hc send <terminal> "claude --resume <id>"`, `pane.focus`; appends a dismiss line to `sessions/<core id>/<terminal>.jsonl` | `resume.sent`, `resume.candidates` |
+| scrollback | `hc read --lines 1000000 <terminal>`; herdr-core's `config.toml` (`%APPDATA%\herdr-core\` on Windows) | writes `history_mb` there on Save | none |
 | projects | folder names under `props.root` (PowerShell / `ls`), `spaces()`, `panes()` | `space.select`, `space.new` | `projects.hidden` |
 | skills | `~/.claude/skills`, `<repo>/.claude/skills`, `~/.claude/plugins/installed_plugins.json` | `hc send --if idle <agent> "/skill args"` | none |
 | agent-folders | `agents()`, `terminals()`, `spaces()`, `panes()`, `layout()` | `hc label <terminal> agentfolders.folder=…`, `pane.focus`, `terminal.peek`, `terminal.pin`, `layout.resize` | `agentFolders`, `sidebar.width`, `sidebar.collapsed` |

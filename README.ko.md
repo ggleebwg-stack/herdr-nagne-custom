@@ -1,7 +1,7 @@
 # herdr-nagne-custom
 
 **에이전트 하나를 돌리면서, 그 하위 에이전트들이 일하는 모습을 옆에서 본다.**
-[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex·Grok·Hermes·OpenRouter 에이전트 감독용 화면으로 바꾸는 레이아웃 하나, mod 일곱 개, 작은 실행기입니다. 이 컴퓨터뿐 아니라 Tailscale로 연결한 다른 컴퓨터의 에이전트도 다룹니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
+[herdr](https://github.com/herdrdev/herdr-app)를 Claude Code·Codex·Grok·Hermes·OpenRouter 에이전트 감독용 화면으로 바꾸는 레이아웃 하나, mod 여덟 개, 작은 실행기입니다. 이 컴퓨터뿐 아니라 Tailscale로 연결한 다른 컴퓨터의 에이전트도 다룹니다. Windows에서 매일 쓰며 만들었습니다. macOS 경로도 넣었지만 덜 검증됐습니다.
 
 [English README](README.md) · [프로젝트 지도](MAP.ko.md): 파일 구성, 설치 위치, 연결 구조 · [Releases](https://github.com/ggleebwg-stack/herdr-nagne-custom/releases): 버전별 변경 내역
 
@@ -56,6 +56,14 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 ![Resume agents](docs/resume.png)
 
 재부팅·로그아웃·core 비정상 종료 뒤에는 칸마다 빈 셸로 돌아옵니다. kit가 어느 칸에서 어떤 Claude Code 세션이 돌았는지 기억해 두었다가, 클릭 한 번으로 이어가게 해 줍니다. 자세히: [재부팅 뒤 이어가기](#재부팅-뒤-이어가기).
+
+### 전체 기록
+
+![전체 기록 창: 50,001줄짜리 빌드 로그와 줄 번호, 찾기 칸, 아래쪽의 터미널별 기록 설정](docs/full-history.png)
+
+터미널 칸은 최대 10,000줄까지만 거슬러 올라가고(herdr-app에 고정된 한도), 창을 다시 열면 약 2,000줄만 남습니다. herdr-core는 터미널 기록을 따로 보관하는데, `scrollback` mod가 그 전부를 보여 줍니다. 포커스한 터미널은 `Ctrl+Shift+Y`, 에이전트는 오른쪽 클릭 메뉴의 **Full history**로 엽니다. 스크롤, 찾기, 선택, 복사가 되고, 가장 최근 출력에서 열립니다.
+
+herdr-core가 터미널마다 얼마나 보관할지는 그 창 아래쪽(**Keep per terminal … MB**)에서 정하거나, 설치할 때 `--history-mb <MB>`로 정하거나, herdr-core의 설정 파일에 직접 씁니다. `%APPDATA%\herdr-core\config.toml`(macOS·Linux는 `~/.config/herdr-core/config.toml`)에 `history_mb = 40`처럼 적습니다. 기본은 약 5MB(약 3,000줄)이고, 1MB가 대략 600~1,000줄입니다. 바꾼 뒤 새로 시작하는 터미널부터 적용됩니다. 칸 자체의 10,000줄 한도는 herdr-app 밖에서 바꿀 수 없습니다.
 
 ### 프로젝트 목록
 
@@ -113,17 +121,18 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 | `--keys` | `keys.snippet.json`의 단축키를 `~/.config/herdr-app/keys.json`에 추가합니다. Windows에서는 `~/.claude/keybindings.json`에 Ctrl+V 이미지 붙여넣기도 추가합니다. Windows의 Claude Code는 이미지를 Alt+V로 붙여서, 이미지를 복사하고 Ctrl+V를 눌러도 반응이 없었습니다. 이미 다른 동작에 쓰는 키는 그대로 두고 목록으로 알려 줍니다 |
 | `--claude-hooks` | `~/.claude/settings.json`의 SessionStart·SessionEnd에 이어가기 훅을 한 번만 덧붙입니다. 기존 훅은 그대로입니다 |
 | `--codex-rules` | [`codex.rules`](codex.rules)를 `~/.codex/rules/herdr-nagne.rules`로 넣어 **Codex가 감독할 때도** 워커를 띄울 수 있게 합니다. Codex 샌드박스는 herdr-core에 접근하지 못하므로, `hw`와 `hc ls`·`get`·`wait`·`read`만 샌드박스 밖에서 실행하게 허용합니다. 기존 Codex 규칙은 그대로입니다 |
+| `--history-mb <MB>` | herdr-core가 터미널마다 보관할 기록 크기를 정합니다(`config.toml`의 `history_mb`, 1~500). [전체 기록](#전체-기록) 창이 이 기록을 보여 줍니다. 옵션이 없으면 파일을 건드리지 않습니다 |
 | `--hermes-status` | [`hermes/herdr-status`](hermes/herdr-status)를 Hermes 플러그인 폴더(`%LOCALAPPDATA%\hermes\plugins` 또는 `~/.hermes/plugins`)에 넣고 `hermes plugins enable herdr-status`를 실행합니다. 실행 중인 Hermes는 다시 시작해야 적용됩니다 |
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.4.6`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.7`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
 | 저장소 | 설치 위치 |
 |---|---|
-| `mods/*` (mod 7개) | `~/.config/herdr-app/mods/` |
+| `mods/*` (mod 8개) | `~/.config/herdr-app/mods/` |
 | `layouts/supervisor.json` | `~/.config/herdr-app/layouts/` |
 | `templates/*.md` | Windows `%APPDATA%\herdr-core\templates\`, 그 밖 `~/.config/herdr-core/templates/` |
 | `hw`, `nagne-session-hook`, `herdr-link` | `~/.local/bin/` (이 폴더가 PATH에 있어야 함) |
@@ -149,7 +158,7 @@ herdr의 `settings.json`과 이미 있는 `providers.json`은 건드리지 않�
 ### 업데이트와 삭제
 
 - **업데이트**: 같은 `npx` 명령을 다시 실행합니다. 실행할 때마다 최신 버전을 받아 옵니다. 바뀌지 않은 파일은 그대로 두고, 교체한 파일만 `~/.herdr-config-backup/<시각>/`으로 옮깁니다. 끝나면 `Updated from 0.3.0 to 0.3.1: skills, explore.md`처럼 바뀐 것을 알려 주고, 바뀐 것이 없으면 `Already up to date`라고 알려 줍니다. 프로젝트 폴더, `providers.json`, 단축키, 훅은 유지됩니다. 직접 고친 템플릿이나 mod는 바뀐 파일로 보고 교체합니다(원래 것은 백업에 있습니다). 내 템플릿을 지키려면 다른 이름으로 저장하세요.
-- **삭제**: `Ctrl+Shift+L`로 `main` 레이아웃으로 돌아갑니다. `~/.config/herdr-app/`에서 `mods/workers`, `mods/projects`, `mods/status-plus`, `mods/providers`, `mods/resume`, `mods/skills`, `mods/agent-folders`, `layouts/supervisor.json`을 다른 곳으로 옮기고, 추가한 단축키를 지웁니다. 화면이 깨지면 `Ctrl+Alt+Shift+Esc`로 herdr 기본 레이아웃으로 초기화할 수 있습니다.
+- **삭제**: `Ctrl+Shift+L`로 `main` 레이아웃으로 돌아갑니다. `~/.config/herdr-app/`에서 `mods/workers`, `mods/projects`, `mods/status-plus`, `mods/providers`, `mods/resume`, `mods/skills`, `mods/agent-folders`, `mods/scrollback`, `layouts/supervisor.json`을 다른 곳으로 옮기고, 추가한 단축키를 지웁니다. 화면이 깨지면 `Ctrl+Alt+Shift+Esc`로 herdr 기본 레이아웃으로 초기화할 수 있습니다.
 
 ### 문제 해결
 
@@ -289,6 +298,7 @@ History 버튼과 `Ctrl+Shift+H`는 [plutotw/herdr-main-usage](https://github.co
 - `status-plus`는 켜 둔 프로바이더의 사용량 조회 주소에만 접속합니다(Anthropic, OpenAI, OpenRouter). 로그인 정보와 키는 각 회사 서버에만 보내고, 따로 저장하거나 기록하지 않습니다. Grok은 로컬 `grok usage --json`만 실행합니다.
 - `nagne-session-hook`과 `resume`은 이 컴퓨터 안에서만 동작합니다. `~/.config/herdr-nagne/sessions/`에 세션 ID, 폴더, 시각만 남기고, `hc ls`·`hc get`·`hc send`만 씁니다. 외부로 보내는 것은 없습니다.
 - `providers`는 로컬 명령만 실행합니다. 각 CLI의 상태 확인·로그인·로그아웃(`claude auth status`, `codex login status`, `opencode auth list`)과 `~/.grok/auth.json`에 로그인이 있는지 확인하는 것뿐이며, 직접 보내는 통신은 없습니다.
+- `scrollback`은 `hc read`를 실행하고, Save를 누를 때만 herdr-core `config.toml`의 `history_mb` 한 줄을 씁니다.
 - 나머지 mod는 네트워크를 쓰지 않습니다.
 
 ## 라이선스

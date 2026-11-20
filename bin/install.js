@@ -16,8 +16,8 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { ask: cmd, drift } = require("./compat");
 
-const USAGE = "usage: npx github:ggleebwg-stack/herdr-nagne-custom [--dry-run] [--projects-root <dir>] [--keys] [--claude-hooks] [--codex-rules] [--hermes-status]";
-const opt = { dry: false, root: null, keys: false, hooks: false, codexRules: false, hermes: false };
+const USAGE = "usage: npx github:ggleebwg-stack/herdr-nagne-custom [--dry-run] [--projects-root <dir>] [--keys] [--claude-hooks] [--codex-rules] [--hermes-status] [--history-mb <MB>]";
+const opt = { dry: false, root: null, keys: false, hooks: false, codexRules: false, hermes: false, historyMb: null };
 for (let i = 2; i < process.argv.length; i++) {
   const a = process.argv[i];
   if (a === "--dry-run") opt.dry = true;
@@ -27,6 +27,7 @@ for (let i = 2; i < process.argv.length; i++) {
   else if (a === "--hermes-status") opt.hermes = true;
   else if (a === "--projects-root" && process.argv[i + 1]) opt.root = process.argv[++i];
   else if (a.startsWith("--projects-root=")) opt.root = a.slice("--projects-root=".length);
+  else if (a === "--history-mb" && /^\d+$/.test(process.argv[i + 1] || "") && +process.argv[i + 1] >= 1 && +process.argv[i + 1] <= 500) opt.historyMb = +process.argv[++i];
   else {
     console.error(`unknown option ${a}\n${USAGE}`);
     process.exit(2);
@@ -230,6 +231,29 @@ if (opt.hermes || hermesHad) {
     hermesNote = r.status === 0
       ? "Hermes: herdr-status enabled; restart running Hermes sessions to load it"
       : `Hermes: could not enable herdr-status (${r.error ? "hermes not found on PATH" : (r.stderr || r.stdout).trim().split(/\r?\n/).pop()}); run  hermes plugins enable herdr-status`;
+  }
+}
+
+// How much history herdr-core keeps per terminal: `history_mb` in its own config.toml (read when a
+// terminal starts). The scrollback mod shows and sets the same line.
+const CORE_CONFIG = process.env.APPDATA
+  ? path.join(process.env.APPDATA, "herdr-core", "config.toml")
+  : path.join(HOME, ".config", "herdr-core", "config.toml");
+if (opt.historyMb) {
+  const old = fs.existsSync(CORE_CONFIG) ? fs.readFileSync(CORE_CONFIG, "utf8") : null;
+  // Only the part before the first [section] is top level in TOML.
+  const top = (old || "").split(/^\s*\[/m)[0];
+  const KEY = /^\s*history_mb\s*=.*$/m;
+  const line = `history_mb = ${opt.historyMb}`;
+  const text = KEY.test(top) ? top.replace(KEY, line) + (old || "").slice(top.length) : `${line}\n${old || ""}`;
+  if (text === old) unchanged++;
+  else if (DRY) console.log(`would set ${line} in ${CORE_CONFIG}`);
+  else {
+    if (old !== null) backupCopy(CORE_CONFIG);
+    else replaced++;
+    fs.mkdirSync(path.dirname(CORE_CONFIG), { recursive: true });
+    fs.writeFileSync(CORE_CONFIG, text);
+    changedNames.push("config.toml");
   }
 }
 

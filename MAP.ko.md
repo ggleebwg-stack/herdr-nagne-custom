@@ -11,6 +11,7 @@ herdr-nagne-custom/
 │   ├── status-plus/       상태바: 프로바이더별 사용량 칸, 새로고침, History·Skills 버튼
 │   ├── providers/         Providers 창: 켜고 끄기, 로그인·로그아웃, OpenRouter 키·모델 (Ctrl+Shift+U)
 │   ├── resume/            재부팅 뒤 "Resume agents" 목록 (status-plus의 Resume 칸이나 알림으로 열림)
+│   ├── scrollback/        전체 기록 창: herdr-core가 보관한 터미널 기록 전체와 history_mb 설정 (Ctrl+Shift+Y)
 │   ├── projects/          왼쪽 프로젝트 폴더 목록
 │   ├── skills/            Claude Code 스킬 목록, 대기 중인 에이전트에 /스킬 전송
 │   └── agent-folders/     Agents 목록을 색깔 폴더로 (kiote/pi-setup 기반, 고지 파일 포함)
@@ -115,6 +116,7 @@ herdr의 `~/.config/herdr-app/shared.json`에 저장됩니다. 설치·내보내
 
 - **`status-plus`:** 켜 둔 프로바이더의 사용량 조회 주소만 호출합니다(`api.anthropic.com`, `chatgpt.com`, `openrouter.ai`). 로그인 정보는 각 CLI가 저장해 둔 것을, OpenRouter는 `providers.json`에 적은 환경변수나 파일의 키를 씁니다. Grok은 로컬 `grok usage --json`만 실행합니다.
 - **`providers`:** 로컬 명령만 실행합니다(각 CLI의 상태 확인·로그인·로그아웃). `providers.json`과 `openrouter.key`만 씁니다.
+- **`scrollback`:** `hc read`만 실행하고, Save를 누를 때 herdr-core `config.toml`의 `history_mb` 한 줄만 씁니다.
 - **나머지 mod:** 네트워크를 쓰지 않습니다.
 
 ## 다른 컴퓨터 연결 (Tailscale, ssh 없음)

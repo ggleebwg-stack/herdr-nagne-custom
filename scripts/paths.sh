@@ -6,5 +6,5 @@ BIN="$HOME/.local/bin"
 NAGNE="$HOME/.config/herdr-nagne"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # What this repo owns. Shipped Herdr layouts/mods are never copied (Herdr rewrites them).
-MODS="workers projects status-plus providers resume skills agent-folders"
+MODS="workers projects status-plus providers resume skills agent-folders scrollback"
 LAYOUTS="supervisor.json"

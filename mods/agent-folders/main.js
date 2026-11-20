@@ -17,6 +17,7 @@
 // Local change (2026-11-19): agents read apart at a glance. Working shows "Working", a finished
 // turn you haven't looked at shows a green "Done" pill and a bold name, idle agents are dimmed, and the
 // title counts what needs a look ("1 needs you · 2 done · 1 working").
+// Local change (2026-11-20): the agent menu opens the kit's Full history window (scrollback mod).
 // Everything else is as published (commit 16f9214).
 
 import { View, div, image, svg } from "gpui-kit";
@@ -182,7 +183,12 @@ function agentMenu(t, p) {
     .child(menuItem(t, "mv-new", "New folder…", () => { close(); openDialog(null, p.address); }))
     .child(sep(t))
     .when(Boolean(a), (el) => el.child(menuItem(t, "pin", a.pinned ? "Unpin" : "Pin to the top", () => { run("terminal.pin", { terminal: p.address, pinned: !a.pinned }); close(); })))
-    .child(menuItem(t, "peek", "Peek", () => { run("terminal.peek", { terminal: p.address }); close(); }));
+    .child(menuItem(t, "peek", "Peek", () => { run("terminal.peek", { terminal: p.address }); close(); }))
+    // The kit's scrollback mod: everything herdr-core kept, past the pane's own 10,000 lines.
+    .child(menuItem(t, "history", "Full history", () => {
+      close();
+      openOverlay({ mod: "scrollback", kind: "window", key: "scrollback", width: 980, height: 680, props: { terminal: p.address } });
+    }));
 }
 
 function folderMenu(t, p) {
@@ -543,7 +549,7 @@ export default class AgentFolders extends View {
         .on_mouse_down("left", () => { this.drag = { kind: "agent", id: a.address, from: g.id }; this.over = g.id; })
         .on_mouse_move(hoverGroup(g))
         .on_mouse_up("left", dropOn(g))
-        .on_mouse_down("right", () => openOverlay({ mod: MOD, kind: "popup", width: 230, height: 420, props: { menu: "agent", address: a.address, folder: folderOfAgent.get(a.address) } }))
+        .on_mouse_down("right", () => openOverlay({ mod: MOD, kind: "popup", width: 230, height: 450, props: { menu: "agent", address: a.address, folder: folderOfAgent.get(a.address) } }))
         .on_click(() => run("pane.focus", { pane: a.pane }))
         .child(div().w(3).h(18).flex_none().rounded(2).bg(paint(t, color) ?? t.dim + "00"))
         .when(Boolean(pic), (el) => el.child(div().id(`agent-fold-${a.address}`)

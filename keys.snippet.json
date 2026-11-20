@@ -11,6 +11,10 @@
     "ctrl-shift-u": {
       "command": "mod.open",
       "args": { "name": "providers" }
+    },
+    "ctrl-shift-y": {
+      "command": "mod.open",
+      "args": { "name": "scrollback" }
     }
   },
   "layout:supervisor": {

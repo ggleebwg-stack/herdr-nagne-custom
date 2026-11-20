@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# demo-log <n>  Prints n build-log lines (a long history for the Full history window), then waits.
+# No shell prompt at the end: a prompt would show this computer's user and host names.
+for i in $(seq 1 "${1:-50000}"); do echo "[build] step $i compiled src/module_$((i % 97)).ts ok"; done
+echo "[build] done: ${1:-50000} steps"
+exec sleep 100000

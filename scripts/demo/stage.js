@@ -9,6 +9,9 @@
 //   3. herdr-app shot shot.png, then crop the feature (docs/ images are cropped from such shots)
 //   4. close: herdr-app do window.close, then HC_SESSION=demo hc server stop
 //
+// For the Full history shot: a tab running `bash scripts/demo/demo-log 50000` (no shell prompt, so no
+// user or host name shows), then Ctrl+Shift+Y.
+//
 // The agents are demo-agent: a bash script that reports a state the way Claude Code, Codex or Hermes
 // do (OSC 7501) and prints a few lines. The workers are demo-worker under the first agent.
 "use strict";
