@@ -340,40 +340,37 @@ export default class StatusPlus extends View {
     return key ? `${key}  commands` : "commands";
   }
 
-  // One provider, drawn like Orca's usage bars: "Claude 5h ▬── 11% 2h 13m  wk ▬▬─ 47% 3d 04h".
-  // The bar fills with the share used, in the provider's color, red from 90%. The number turns
-  // yellow from 80% and red from 90%.
   quota(t, key, name, cfg) {
     const u = this.usage[key];
-    const BAR = 56;
+    const BAR = 32;
     const own = /^#[0-9a-f]{6}$/i.test(cfg?.color ?? "") ? cfg.color : BRAND[key] ?? "fg";
     const brand = own === "fg" ? t.foreground : own === "muted" ? t.muted : own;
-    const warn = (used) => used >= 90 ? t.ansi1 : t.ansi3;
-    const fill = (used) => used >= 90 ? t.ansi1 : brand;
+
+    const fill = (used) => used >= 90 ? t.ansi1 : used >= 80 ? t.ansi3 : brand;
     let body, tip;
     if (!u) {
-      body = [div().text_color(t.dim).child("…")];
+      body = [div().text_color(t.foreground).child("…")];
       tip = `${name}: loading`;
     } else if (u.error) {
-      body = [div().text_color(t.dim).child("—")];
+      body = [div().text_color(t.foreground).child("—")];
       tip = `${name}: ${u.error} (click to retry)`;
     } else {
       body = u.windows.map((w) => {
         const used = Math.min(100, Math.max(0, Math.round(w.used)));
         return h_flex().gap(5).items_center()
-          .child(div().text_color(t.muted).child(w.label))
+          .child(div().text_color(t.foreground).child(({ "5h": "5시간", wk: "주간", key: "키 한도" })[w.label] ?? w.label))
           .child(div().w(BAR).h(7).rounded(4).bg(t.border).overflow_hidden()
             .child(div().h(7).rounded(4).w(Math.max(used > 0 ? 3 : 0, Math.round((BAR * used) / 100))).bg(fill(used))))
-          .child(div().w(30).text_right().text_color(used >= 80 ? warn(used) : t.foreground).child(`${used}%`))
-          .when(Number.isFinite(w.resetsAt), (el) => el.child(div().w(46).text_right().text_color(t.dim).child(untilText(w.resetsAt))));
+          .child(div().text_color(t.foreground).child(`${used}%`))
+          .when(w.label === "wk" && Number.isFinite(w.resetsAt), (el) => el.child(div().text_color(t.foreground).child(`${untilText(w.resetsAt)} 후 갱신`)));
       });
-      if (u.note) body.push(div().text_color(u.windows.length ? t.dim : t.muted).child(u.note));
-      const resets = u.windows.filter((w) => Number.isFinite(w.resetsAt)).map((w) => `${w.label} resets in ${untilText(w.resetsAt)}`);
+      if (u.note) body.push(div().text_color(t.foreground).child(u.note));
+      const resets = u.windows.filter((w) => w.label === "wk" && Number.isFinite(w.resetsAt)).map((w) => `${w.label} resets in ${untilText(w.resetsAt)}`);
       tip = [u.info ?? `${name} used`, ...resets].join(" · ") + " (click to refresh)";
       if (u.stale) tip = `${tip}\nAs of ${new Date(u.at).toTimeString().slice(0, 5)}; latest check failed: ${u.stale}`;
     }
     // A chip per provider so the two read as separate groups.
-    return h_flex().id(`quota-${key}`).gap(10).items_center().px(8).py(1).rounded(5)
+    return h_flex().id(`quota-${key}`).gap(6).items_center().px(5).py(1).rounded(5)
       .bg(t.hover).border_1().border_color(t.border).tooltip(tip)
       .on_click((_e, cx) => this.refresh(cx, true))
       .child(div().text_color(t.foreground).child(name))
@@ -382,7 +379,7 @@ export default class StatusPlus extends View {
 
   refreshButton(t) {
     const busy = this.refreshing || this.pending > 0;
-    return div().id("quota-refresh").p(3).rounded(4).text_color(busy ? t.accent : t.muted)
+    return div().id("quota-refresh").p(3).rounded(4).text_color(busy ? t.accent : t.foreground)
       .tooltip(busy ? "Refreshing usage…" : "Refresh usage now")
       .hover((s) => s.bg(t.hover).text_color(t.foreground))
       .on_click((_e, cx) => { if (!(this.pending > 0)) this.refresh(cx, true); })
@@ -391,7 +388,7 @@ export default class StatusPlus extends View {
 
   // Opens the Providers window: switch providers, sign in or out, OpenRouter key and model.
   settingsButton(t) {
-    return div().id("providers-open").p(3).rounded(4).text_color(t.muted).tooltip("Providers: switch on/off, sign in (Ctrl+Shift+U)")
+    return div().id("providers-open").p(3).rounded(4).text_color(t.foreground).tooltip("Providers: switch on/off, sign in (Ctrl+Shift+U)")
       .hover((s) => s.bg(t.hover).text_color(t.foreground))
       .on_click(() => run("mod.open", { name: "providers" }))
       .child(svg("mods/workspace-chrome/settings.svg").size(13));
@@ -399,7 +396,7 @@ export default class StatusPlus extends View {
 
   // A text button: History opens as its own tab, Skills beside the focused agent.
   button(t, id, text, tip, action) {
-    return div().id(id).px(6).py(1).rounded(4).text_color(t.muted).tooltip(tip)
+    return div().id(id).px(6).py(1).rounded(4).text_color(t.foreground).tooltip(tip)
       .hover((s) => s.bg(t.hover).text_color(t.foreground)).on_click(action).child(text);
   }
 
@@ -410,13 +407,13 @@ export default class StatusPlus extends View {
     const needs = list.filter(a => a.status === "blocked").length;
     const label = (icon, text) => h_flex().gap(6).items_center().child(svg(`mods/workspace-chrome/${icon}.svg`).size(13)).child(text);
     // Quota sits bottom-left; the machine, branch, agents and buttons moved to the right.
-    return h_flex().size_full().px(10).gap(16).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.muted)
+    return h_flex().size_full().px(8).gap(8).items_center().bg(t.chrome).border_t(1).border_color(t.border).text_size(11.8).text_color(t.foreground)
       .child(h_flex().gap(8).items_center()
         .when((shared("resume.candidates") ?? []).length > 0, (el) => el.child(this.resumeChip(t)))
         .children((this.providers ?? []).map((p) => this.quota(t, p.key, NAMES[p.key], p.cfg)))
         .when(Boolean(this.confError), (el) => el.child(div().id("providers-error").text_color(t.blocked).tooltip(this.confError).child("providers.json ⚠")))
         .child(h_flex().gap(1).items_center().child(this.refreshButton(t)).child(this.settingsButton(t))))
-      .child(div().flex_1())
+
       .child(label(space?.machine ? "server" : "monitor", space?.machine ?? "This computer"))
       .when(Boolean(space?.branch), el => el.child(label("branch", space.branch)))
       .child(h_flex().gap(6).items_center().child(div().size(6).rounded(3).bg(t.dim)).child(`${list.length} agents`)
@@ -424,6 +421,6 @@ export default class StatusPlus extends View {
       .child(h_flex().gap(2).items_center()
         .when(Boolean(this.hasHistory), (el) => el.child(this.button(t, "open-history", "History", "Past Claude/Codex sessions (Ctrl+Shift+H)", () => run("tab.new", { name: "History", mod: "history" }))))
         .child(this.button(t, "open-skills", "Skills", "Send a skill to an agent (Ctrl+Shift+J)", () => run("pane.split", { direction: "right", mod: "skills" }))))
-      .child(div().id("palette").text_color(t.dim).on_click(() => run("app.palette")).child(this.hint(t)));
+      .child(div().id("palette").text_color(t.foreground).on_click(() => run("app.palette")).child(this.hint(t)));
   }
 }

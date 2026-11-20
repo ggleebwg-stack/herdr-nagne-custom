@@ -1,6 +1,6 @@
 {
   "name": "herdr-nagne-custom",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "herdr customization kit: supervise agent workers, usage bars, providers, resume after reboot",
   "license": "Apache-2.0",
   "repository": {
