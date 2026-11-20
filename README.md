@@ -87,14 +87,14 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 | Option | What it does |
 |---|---|
 | `--projects-root <dir>` | sets the Projects list's folder in the supervisor layout. Without it, an update keeps the folder you set before; a fresh install uses `~/Projects` and warns if it doesn't exist |
-| `--keys` | adds the bindings in `keys.snippet.json` to `~/.config/herdr-app/keys.json`. A key you already bound to something else is kept and listed |
+| `--keys` | adds the bindings in `keys.snippet.json` to `~/.config/herdr-app/keys.json`. On Windows it also binds Ctrl+V to image paste in `~/.claude/keybindings.json`: Claude Code there pastes images with Alt+V, so Ctrl+V with an image copied did nothing. A key you already bound to something else is kept and listed |
 | `--claude-hooks` | appends the resume hook to SessionStart and SessionEnd in `~/.claude/settings.json`, once; your other hooks stay |
 | `--codex-rules` | adds [`codex.rules`](codex.rules) as `~/.codex/rules/herdr-nagne.rules`, so **Codex as the supervisor** can start workers. Codex's sandbox can't reach herdr-core; the rules let only `hw` and `hc ls`/`get`/`wait`/`read` run outside it. Your other Codex rules stay |
 | `--hermes-status` | copies [`hermes/herdr-status`](hermes/herdr-status) into Hermes' plugins folder (`%LOCALAPPDATA%\hermes\plugins`, or `~/.hermes/plugins`) and runs `hermes plugins enable herdr-status`. Restart running Hermes sessions to load it |
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.4` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.5` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 
@@ -233,7 +233,7 @@ The kit remembers which Claude Code session ran in which pane, and offers to con
 
 1. **Record**: `nagne-session-hook` runs on Claude Code's SessionStart and SessionEnd and appends one line to `~/.config/herdr-nagne/sessions/<terminal>.jsonl`. Add it once to `~/.claude/settings.json` from [`claude-hooks.snippet.json`](claude-hooks.snippet.json), next to any hooks you already have. It only records sessions inside herdr terminals, and a nested `claude -p` can't overwrite the pane's session.
 2. **Find**: status-plus looks for a session that started but never ended, in a pane that still exists, isn't a worker, and now shows a plain shell. It checks on start, when a log changes, and every 30 seconds, and it asks herdr-core directly, so a window that is still connecting can't make a running agent look gone.
-3. **Offer**: a **Resume N agents** chip appears at the left of the status bar, with one notification. Clicking it opens a list showing each session's folder, space and start time, with **Show**, **Dismiss** and **Resume**.
+3. **Offer**: a **Resume N agents** chip appears at the left of the status bar, with one notification. Clicking it opens a list showing each session's folder, space and start time, with **Show**, **Dismiss** and **Resume**. Not resuming? The chip's **×** dismisses them all and hides it.
 4. **Resume**: checks the pane again, then types `claude --resume <session>` into it. If the pane is in another folder, it changes to the session's folder first. Nothing resumes without a click, so no usage is spent behind your back.
 
 Claude Code only, for now. Codex has no SessionEnd hook and asks you to trust each new hook, and Grok reads Claude's hooks (the script ignores Grok's sessions). Only panes on this computer are covered.

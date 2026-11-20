@@ -83,14 +83,14 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 | 옵션 | 하는 일 |
 |---|---|
 | `--projects-root <폴더>` | supervisor 레이아웃의 Projects 목록 폴더를 정합니다. 옵션이 없으면 업데이트할 때 이전에 정한 폴더를 그대로 두고, 처음 설치할 때는 `~/Projects`를 쓰되 그 폴더가 없으면 경고합니다 |
-| `--keys` | `keys.snippet.json`의 단축키를 `~/.config/herdr-app/keys.json`에 추가합니다. 이미 다른 동작에 쓰는 키는 그대로 두고 목록으로 알려 줍니다 |
+| `--keys` | `keys.snippet.json`의 단축키를 `~/.config/herdr-app/keys.json`에 추가합니다. Windows에서는 `~/.claude/keybindings.json`에 Ctrl+V 이미지 붙여넣기도 추가합니다. Windows의 Claude Code는 이미지를 Alt+V로 붙여서, 이미지를 복사하고 Ctrl+V를 눌러도 반응이 없었습니다. 이미 다른 동작에 쓰는 키는 그대로 두고 목록으로 알려 줍니다 |
 | `--claude-hooks` | `~/.claude/settings.json`의 SessionStart·SessionEnd에 이어가기 훅을 한 번만 덧붙입니다. 기존 훅은 그대로입니다 |
 | `--codex-rules` | [`codex.rules`](codex.rules)를 `~/.codex/rules/herdr-nagne.rules`로 넣어 **Codex가 감독할 때도** 워커를 띄울 수 있게 합니다. Codex 샌드박스는 herdr-core에 접근하지 못하므로, `hw`와 `hc ls`·`get`·`wait`·`read`만 샌드박스 밖에서 실행하게 허용합니다. 기존 Codex 규칙은 그대로입니다 |
 | `--hermes-status` | [`hermes/herdr-status`](hermes/herdr-status)를 Hermes 플러그인 폴더(`%LOCALAPPDATA%\hermes\plugins` 또는 `~/.hermes/plugins`)에 넣고 `hermes plugins enable herdr-status`를 실행합니다. 실행 중인 Hermes는 다시 시작해야 적용됩니다 |
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.4.4`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.5`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
@@ -218,7 +218,7 @@ herdr 창을 닫아도 아무것도 멈추지 않습니다. herdr-core가 모든
    - 그 칸이 아직 있다.
    - 워커가 아니다.
    - 지금 빈 셸이다.
-3. **제안**: 상태바 왼쪽에 **Resume N agents** 칸이 생기고 알림이 한 번 뜹니다. 누르면 목록이 열리고, 세션마다 폴더, Space, 시작 시각과 **Show**, **Dismiss**, **Resume** 버튼이 있습니다.
+3. **제안**: 상태바 왼쪽에 **Resume N agents** 칸이 생기고 알림이 한 번 뜹니다. 누르면 목록이 열리고, 세션마다 폴더, Space, 시작 시각과 **Show**, **Dismiss**, **Resume** 버튼이 있습니다. 이어가지 않으려면 칸 오른쪽 **×**를 누르면 모두 지우고 칸도 사라집니다.
 4. **이어가기**: 그 칸을 한 번 더 확인한 뒤 `claude --resume <세션>`을 입력합니다. 칸의 폴더가 다르면 세션 폴더로 먼저 이동합니다. 버튼을 누르기 전에는 아무것도 실행하지 않으므로, 모르는 사이에 사용량이 쓰이지 않습니다.
 
 지금은 Claude Code만 지원합니다.

@@ -280,12 +280,32 @@ export default class StatusPlus extends View {
     });
   }
 
+  // Dismiss every candidate, as the resume mod's Dismiss does one: a dismiss line in its log, so
+  // the next scan leaves it out. The panes and their shells stay as they are.
+  dismissAll(cx) {
+    const list = shared("resume.candidates") ?? [];
+    setShared("resume.candidates", []);
+    cx.notify();
+    cx.spawn(async () => {
+      for (const c of list) {
+        const path = `${SESSIONS}/${c.terminal}.jsonl`;
+        const old = (await readTextFile(path).catch(() => null)) ?? "";
+        const sep = old && !old.endsWith("\n") ? "\n" : "";
+        await writeTextFile(path, `${old}${sep}${JSON.stringify({ e: "dismiss", id: c.id, at: Date.now() })}\n`, old || null).catch(() => null);
+      }
+    });
+  }
+
   resumeChip(t) {
     const n = (shared("resume.candidates") ?? []).length;
-    return div().id("resume-open").px(8).py(1).rounded(5).border_1().border_color(t.accent).text_color(t.accent)
-      .tooltip("Agents that were running before herdr-core restarted (reboot, logout). Click to choose which to resume.")
-      .hover((s) => s.bg(t.hover)).on_click(() => run("mod.open", { name: "resume" }))
-      .child(`Resume ${n} agent${n > 1 ? "s" : ""}`);
+    return h_flex().items_center().rounded(5).border_1().border_color(t.accent).text_color(t.accent)
+      .child(div().id("resume-open").pl(8).pr(4).py(1).rounded_l(5)
+        .tooltip("Agents that were running before herdr-core restarted (reboot, logout). Click to choose which to resume.")
+        .hover((s) => s.bg(t.hover)).on_click(() => run("mod.open", { name: "resume" }))
+        .child(`Resume ${n} agent${n > 1 ? "s" : ""}`))
+      .child(div().id("resume-dismiss").px(5).py(1).rounded_r(5).tooltip("Don't resume: dismiss all and hide this")
+        .hover((s) => s.bg(t.hover)).on_click((_e, cx) => this.dismissAll(cx))
+        .child("×"));
   }
 
   // The palette key as actually bound, not a hardcoded one; without a

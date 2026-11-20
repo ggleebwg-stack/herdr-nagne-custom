@@ -3,7 +3,8 @@
 // session hook script. Run it with  npx github:ggleebwg-stack/herdr-nagne-custom [--dry-run]
 // Anything it replaces is moved first to ~/.herdr-config-backup/<time>/ (nothing is deleted).
 // providers.json and herdr's settings.json are yours: it never edits them. keys.json and
-// ~/.claude/settings.json are edited only with --keys / --claude-hooks, after a backup copy.
+// ~/.claude/settings.json are edited only with --keys / --claude-hooks, after a backup copy (on
+// Windows --keys also adds Ctrl+V image paste to ~/.claude/keybindings.json).
 // --codex-rules adds the kit's own ~/.codex/rules/herdr-nagne.rules (Codex's other rules are untouched).
 // --hermes-status adds the herdr-status plugin to Hermes Agent and enables it (`hermes plugins enable`).
 // Run it again to update: files that are already the same are left alone, the projects root of
@@ -242,6 +243,34 @@ if (opt.keys && keysMissing) {
   }
 }
 
+// Image paste in Claude Code on Windows. herdr's Ctrl+V pastes clipboard text itself and passes the
+// key on when the clipboard holds only an image, but Claude Code on Windows pastes images with
+// Alt+V, not Ctrl+V. Binding Ctrl+V to chat:imagePaste makes the usual key work (also with --keys).
+const CLAUDE_KEYS = path.join(HOME, ".claude", "keybindings.json");
+let claudeKeyMissing = false;
+const claudeKeys = readJson(CLAUDE_KEYS, {});
+if (process.platform === "win32") {
+  const blocks = (claudeKeys.bindings ||= []);
+  let chat = blocks.find((b) => b && b.context === "Chat");
+  if (!chat) blocks.push((chat = { context: "Chat", bindings: {} }));
+  const have = (chat.bindings ||= {});
+  if (!("ctrl+v" in have)) {
+    have["ctrl+v"] = "chat:imagePaste";
+    claudeKeyMissing = true;
+  } else if (have["ctrl+v"] !== "chat:imagePaste") {
+    keyNotes.push(`  Claude Code ctrl+v is already bound to ${JSON.stringify(have["ctrl+v"])}; kept it (images paste with Alt+V)`);
+  }
+}
+if (opt.keys && claudeKeyMissing) {
+  console.log(`${DRY ? "would add" : "added"} Ctrl+V image paste to ${CLAUDE_KEYS}`);
+  changedNames.push("~/.claude/keybindings.json");
+  if (!DRY) {
+    if (fs.existsSync(CLAUDE_KEYS)) backupCopy(CLAUDE_KEYS);
+    fs.mkdirSync(path.dirname(CLAUDE_KEYS), { recursive: true });
+    fs.writeFileSync(CLAUDE_KEYS, JSON.stringify(claudeKeys, null, 2) + "\n");
+  }
+}
+
 const CLAUDE = path.join(HOME, ".claude", "settings.json");
 const settings = readJson(CLAUDE, {});
 let hooksMissing = 0;
@@ -260,7 +289,7 @@ if (opt.hooks && hooksMissing) {
     fs.writeFileSync(CLAUDE, JSON.stringify(settings, null, 2) + "\n");
   }
 }
-const keysTodo = keysMissing && !opt.keys;
+const keysTodo = (keysMissing || claudeKeyMissing) && !opt.keys;
 const hooksTodo = hooksMissing && !opt.hooks;
 
 // Let herdr itself validate what was installed.
@@ -304,7 +333,7 @@ const onPath = (process.env.PATH || "").split(path.delimiter)
   .some((p) => path.resolve(p).toLowerCase() === path.resolve(BIN).toLowerCase());
 
 const steps = [];
-if (keysTodo) steps.push(`Add the bindings: run again with --keys, or copy keys.snippet.json into ${KEYS} by hand`);
+if (keysTodo) steps.push(`Add the bindings: run again with --keys (herdr's keys.json${process.platform === "win32" ? ", and Ctrl+V image paste in Claude Code" : ""}), or copy keys.snippet.json into ${KEYS} by hand`);
 if (!opt.root && !keptRoot) steps.push(`Set your projects folder: run again with --projects-root <dir> (now ${root})`);
 steps.push(`Switch layout: ${process.platform === "darwin" ? "Cmd+Shift+L" : "Ctrl+Shift+L"}, or  herdr-app do layout.switch '{"name":"supervisor"}'`);
 steps.push("Choose providers and sign in: Ctrl+Shift+U (Providers window)");
