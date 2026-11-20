@@ -42,7 +42,7 @@ It fetches the newest version, replaces only the files that changed, and prints 
 | ⚙️ | **`providers` mod** | A **Providers window** (`Ctrl+Shift+U`, or the gear in the status bar): switch Claude, Codex, Grok and OpenRouter on or off, see whether each CLI is signed in, **sign in or out** (the vendor's own login runs in a herdr tab), and set the OpenRouter usage key and worker model. |
 | 📁 | **`projects` mod** | A sidebar list of your project folders, newest first. Clicking a folder jumps to the space already working there, or opens one. Hover × hides a folder; nothing on disk is touched. |
 | 🧩 | **`skills` mod** | Lists your Claude Code skills (personal, project and plugin) and sends `/skill args` to an agent, **only if that agent is idle**. |
-| 🗂️ | **`agent-folders` mod** | The Agents list grouped into colored folders, with drag and drop and rules. This is [kiote's mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders) with the Windows taskbar dot removed. |
+| 🗂️ | **`agent-folders` mod** | The Agents list grouped into colored folders, with drag and drop and rules. This is [kiote's mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders) with the Windows taskbar dot removed, and states you can tell apart: **Working**, **Done** (finished, not looked at yet) and dimmed idle agents, with counts beside the title. |
 | 🚀 | **`hw` + worker templates** | `hw <template> <name> "<task>"` starts a background worker from a template: `explore` (Claude Haiku), `grok-explore` (Grok), `openrouter-explore` (any OpenRouter model via opencode), `spec-check` and `astra-review` (Codex). All of them are read-only ([how that is enforced](#how-read-only-is-enforced)). A provider switched off in `providers.json` is refused. |
 | 🌐 | **`herdr-link`** | Links your computers over **Tailscale** with no ssh server: `herdr-link on` on one, `herdr-link add` on the other, and you start and watch agents there from this window. Only devices signed in as your Tailscale user get in. |
 
@@ -91,7 +91,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 Files edited by `--keys` and `--claude-hooks` are copied to the same backup folder first. After copying, the installer runs `herdr-app check` on each mod and reports any that fail.
 
-Add `#v0.4.2` to the end to install a given release. There is nothing to clone.
+Add `#v0.4.3` to the end to install a given release. There is nothing to clone.
 
 The installer copies:
 

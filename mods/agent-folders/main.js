@@ -13,7 +13,11 @@
 //
 // Local change (2026-11-19): the Windows taskbar dot is removed. It ran
 // `hc-badge`, a pi-setup program not installed here, so every state change spawned a failing
-// process. Everything else is as published (commit 16f9214).
+// process.
+// Local change (2026-11-19): agents read apart at a glance. Working shows "Working", a finished
+// turn you haven't looked at shows a green "Done" pill and a bold name, idle agents are dimmed, and the
+// title counts what needs a look ("1 needs you · 2 done · 1 working").
+// Everything else is as published (commit 16f9214).
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
@@ -330,14 +334,28 @@ export default class AgentFolders extends View {
     });
   }
 
+  // compact: an icon only (folded headers, sub-agents, the narrow sidebar). Otherwise working,
+  // finished-but-unseen and waiting agents also get a word, so they read apart from idle ones.
   status(t, a, compact = false) {
-    const color = t[a.status] ?? t.dim;
+    const color = a.status === "done" ? t.ansi2 ?? t.done : t[a.status] ?? t.dim;
+    const pill = (c, text) => div().flex_none().px(6).h(18).rounded(5).bg(c + "26").text_size(10.5).font_semibold().text_color(c).flex().items_center().child(text);
     // Static on purpose: `.spin` redraws the view ~10 times a second, costly without a GPU.
-    if (a.status === "working") return svg("mods/workspace-chrome/spinner.svg").size(12).mx(1).flex_none().text_color(t.working);
+    const spinner = svg("mods/workspace-chrome/spinner.svg").size(12).mx(1).flex_none().text_color(t.working);
+    if (a.status === "working") return compact ? spinner : div().flex_none().text_size(10.5).font_medium().text_color(t.foreground).child("Working");
     if (a.status === "blocked" && compact) return div().size(14).flex_none().rounded(4).bg(t.blocked + "26").text_size(10.5).font_bold().text_color(t.blocked).flex().items_center().justify_center().child("!");
-    if (a.status === "blocked") return div().flex_none().px(6).h(18).rounded(5).bg(t.blocked + "26").text_size(10.5).font_semibold().text_color(t.blocked).flex().items_center().child("Needs you");
+    if (a.status === "blocked") return pill(t.blocked, "Needs you");
+    if (a.status === "done" && !compact) return pill(color, "Done");
     if (a.status === "idle") return div().size(7).mx(3).flex_none().rounded(4).border(1.5).border_color(t.idle ?? t.dim);
     return div().size(7).mx(3).flex_none().rounded(4).bg(a.status === "done" ? color : t.dim + "00");
+  }
+
+  // "1 working · 2 done · 1 needs you" beside the Agents title.
+  summary(t, list) {
+    const count = (s) => list.filter((a) => a.status === s).length;
+    const parts = [["blocked", "needs you"], ["done", "done"], ["working", "working"]]
+      .map(([s, word]) => [s, count(s), word]).filter(([, n]) => n > 0);
+    const tone = { blocked: t.blocked, done: t.ansi2 ?? t.done, working: t.foreground };
+    return h_flex().gap(8).text_size(10.5).children(parts.map(([s, n, word]) => div().text_color(tone[s] ?? t.dim).child(`${n} ${word}`)));
   }
 
   subRow(t, s, shown, color) {
@@ -514,6 +532,7 @@ export default class AgentFolders extends View {
         .gap(9)
         .when(a.focused, (el) => el.bg(t.selected))
         .when(dragged, (el) => el.opacity(0.5))
+        .when(idle && !dragged, (el) => el.opacity(0.6))
         .cursor_pointer()
         .hover((s) => s.bg(t.hover))
         .on_hover((on, cx) => {
@@ -534,13 +553,13 @@ export default class AgentFolders extends View {
             cx.notify();
           })).child(pic)))
         .child(h_flex().flex_1().min_w(0).gap(5).items_center()
-          .child(div().min_w(0).max_w(showMore ? 120 : 200).truncate().text_color(idle ? t.muted : t.foreground).child(a.space_name || more))
+          .child(div().min_w(0).max_w(showMore ? 120 : 200).truncate().text_color(idle ? t.muted : t.foreground).when(a.status === "done", (el) => el.font_semibold()).child(a.space_name || more))
           .when(showMore, (el) => el.child(div().flex_1().min_w(0).truncate().text_color(t.dim).child(`\u00b7 ${more}`))))
         .when(Boolean(machine), (el) => el.child(div().text_size(10).text_color(t.dim).child(machine)))
         .when(subs.length > 0 && this.folded.has(a.address), (el) => el.child(div().text_size(11).text_color(t.dim).child(`+${subs.length}`)))
         .when(this.hovered === a.address && !this.drag, (el) => el.child(pin))
         .when((this.hovered !== a.address || this.drag) && Boolean(when), (el) => el.child(div().flex_none().text_size(11).text_color(t.dim).child(duration(now - when))))
-        .child(this.status(t, a, true));
+        .child(this.status(t, a));
     };
 
     const withKids = (g) => (a, i) => {
@@ -621,7 +640,8 @@ export default class AgentFolders extends View {
             .flex_none()
             .items_center()
             .gap(4)
-            .child(div().flex_1().text_size(11.5).font_medium().text_color(t.dim).child("Agents"))
+            .child(div().text_size(11.5).font_medium().text_color(t.dim).child("Agents"))
+            .child(div().flex_1().pl(8).child(this.summary(t, list)))
             .child(iconButton("af-sort", byStatus ? "clock" : "layers", byStatus ? "Inside folders: by status (click for space order)" : "Inside folders: by space (click for status order)", () => {
               const s = load();
               s.sort = byStatus ? "space" : "status";

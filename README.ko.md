@@ -40,7 +40,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom
 | **`providers` mod** | **Providers 창**(`Ctrl+Shift+U` 또는 상태바 톱니 버튼). Claude·Codex·Grok·OpenRouter를 켜고 끄고, 각 CLI의 로그인 상태를 보고, **로그인·로그아웃**합니다(로그인은 각 회사 CLI가 herdr 탭에서 진행). OpenRouter 사용량 키와 워커 모델도 여기서 정합니다. |
 | **`projects` mod** | 왼쪽에 프로젝트 폴더 목록을 최근 수정 순으로 보여줍니다. 클릭하면 그 폴더에서 작업 중인 Space로 가고, 없으면 새로 엽니다. ×로 목록에서 숨길 수 있고, 디스크의 폴더는 건드리지 않습니다. |
 | **`skills` mod** | Claude Code 스킬(개인·프로젝트·플러그인)을 보여주고, `/스킬 인자`를 **대기 중인 에이전트에게만** 보냅니다. |
-| **`agent-folders` mod** | Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. [kiote의 mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders)에서 Windows 작업표시줄 점 표시만 뺐습니다. |
+| **`agent-folders` mod** | Agents 목록을 색깔 폴더로 묶습니다. 끌어다 놓기와 규칙을 지원합니다. [kiote의 mod](https://github.com/kiote/pi-setup/tree/main/herdr/agent-folders)에서 Windows 작업표시줄 점 표시를 뺐고, 상태가 한눈에 구분되게 했습니다. **Working**(작업 중), **Done**(끝났는데 아직 안 봄), 흐리게 표시된 휴면 에이전트로 나뉘고, 제목 옆에 개수가 나옵니다. |
 | **`hw` + 워커 템플릿** | `hw <템플릿> <이름> "<작업>"`으로 백그라운드 워커를 띄웁니다. 템플릿은 `explore`(Claude Haiku), `grok-explore`(Grok), `openrouter-explore`(opencode로 OpenRouter 모델), `spec-check`·`astra-review`(Codex)이고 모두 읽기 전용입니다([지켜지는 방식](#읽기-전용은-어떻게-지켜지나)). `providers.json`에서 꺼 둔 프로바이더는 실행하지 않습니다. |
 | **`herdr-link`** | **Tailscale**로 컴퓨터끼리 ssh 서버 없이 연결합니다. 한쪽에서 `herdr-link on`, 다른 쪽에서 `herdr-link add`를 하면 이 창에서 상대 컴퓨터의 에이전트를 띄우고 볼 수 있습니다. 내 Tailscale 사용자로 로그인한 기기만 들어올 수 있습니다. |
 
@@ -87,7 +87,7 @@ npx github:ggleebwg-stack/herdr-nagne-custom --projects-root ~/Code --keys --cla
 
 `--keys`, `--claude-hooks`로 고치는 파일은 먼저 같은 백업 폴더에 복사해 둡니다. 복사가 끝나면 mod마다 `herdr-app check`를 돌려 실패한 것을 알려 줍니다.
 
-특정 릴리스를 설치하려면 끝에 `#v0.4.2`를 붙입니다. 저장소를 받을 필요는 없습니다.
+특정 릴리스를 설치하려면 끝에 `#v0.4.3`를 붙입니다. 저장소를 받을 필요는 없습니다.
 
 설치 스크립트가 복사하는 위치:
 
